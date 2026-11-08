@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // The password itself is never logged.
         error_log('Password reset for user ' . $targetId . ' by user ' . $CURRENT_USER_ID . ' (' . $CURRENT_USER_ROLE . ').');
         try {
-            ActivityLogger::log($pdo, 'user_password_reset', $CURRENT_USER_ID, ['user_id' => $targetId]);
+            ActivityLogger::log($pdo, ActivityLogger::USER_PASSWORD_RESET, $CURRENT_USER_ID, ['user_id' => $targetId]);
         } catch (Throwable $e) {
             error_log('Activity log for password reset failed: ' . $e->getMessage());
         }
@@ -279,6 +279,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw $e;
         }
 
+        if ((string)$target['role'] !== $newRole) {
+            ActivityLogger::log($pdo, ActivityLogger::USER_ROLE_CHANGED, $CURRENT_USER_ID, [
+                'user_id' => $targetId, 'from_role' => (string)$target['role'], 'to_role' => $newRole, 'city_id' => $newCityId,
+            ]);
+        }
+
         $cityName = null;
         if ($newCityId !== null) {
             $nameStmt = $pdo->prepare('SELECT name FROM cities WHERE id = ?');
@@ -337,6 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($active) {
             $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = ?")->execute([$targetId]);
             (new SurveyorRemovalRepository($pdo))->cancel($targetId);
+            ActivityLogger::log($pdo, ActivityLogger::USER_ACTIVATED, $CURRENT_USER_ID, ['user_id' => $targetId]);
             echo json_encode(['success' => true, 'mode' => 'active']);
             exit;
         }
@@ -376,6 +383,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw $e;
             }
             workNotifyRemoval($pdo, $who, $plan, $mode, REMOVAL_ACTION_DEACTIVATE);
+            ActivityLogger::log($pdo, ActivityLogger::USER_DEACTIVATED, $CURRENT_USER_ID, [
+                'user_id' => $targetId, 'mode' => $mode, 'released' => $released, 'in_progress' => count($plan['keep']),
+            ]);
             echo json_encode(['success' => true, 'mode' => $mode, 'released' => $released, 'in_progress' => count($plan['keep']),
                 'message' => surveyorRemovalMessage((string)$who['name'], REMOVAL_ACTION_DEACTIVATE, $mode, $released, count($plan['keep']))]);
             exit;
@@ -383,6 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $update = $pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
         $update->execute([0, $targetId]);
+        ActivityLogger::log($pdo, ActivityLogger::USER_DEACTIVATED, $CURRENT_USER_ID, ['user_id' => $targetId, 'mode' => 'now']);
 
         echo json_encode(['success' => true, 'mode' => 'now']);
         exit;

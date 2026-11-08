@@ -15,6 +15,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../config/rate_limit.php';
 
 startSecureSession();
@@ -150,6 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimited) {
             ->execute([$publicId, $newId]);
 
         // ── FIX 2: Auto-login the new user immediately ────────────
+        ActivityLogger::log($pdo, ActivityLogger::USER_REGISTERED, (int)$newId, ['email' => mb_substr((string)$email, 0, 100)]);
+
         session_regenerate_id(true);
         $_SESSION['user_id']         = $newId;
         $_SESSION['user_name']       = $name;

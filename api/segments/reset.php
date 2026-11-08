@@ -11,6 +11,7 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../helpers/Validator.php';
 require_once __DIR__ . '/../../repositories/SegmentRepository.php';
@@ -91,6 +92,7 @@ try {
     );
 
     $pdo->commit();
+    ActivityLogger::log($pdo, ActivityLogger::SEGMENT_RESET, (int)$CURRENT_USER_ID, ['segment_id' => (int)$segmentId]);
 
     echo json_encode([
         'success'    => true,

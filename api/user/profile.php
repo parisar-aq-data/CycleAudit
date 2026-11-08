@@ -10,6 +10,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../helpers/Cities.php';
 
@@ -124,6 +125,7 @@ if ($action === 'update_profile') {
             error_log('profile city link failed: ' . $e->getMessage());
         }
         $_SESSION['user_name'] = $name;
+        ActivityLogger::log($pdo, ActivityLogger::PROFILE_UPDATED, (int)$CURRENT_USER_ID, ['field' => 'details']);
         json_out(true, ['message' => 'Profile updated successfully.']);
     } catch (Throwable $e) {
         error_log('profile update_profile error: ' . $e->getMessage());
@@ -168,6 +170,7 @@ if ($action === 'update_email') {
         $pdo->prepare('UPDATE users SET email = ?, email_verified = 0 WHERE id = ?')
             ->execute([$newEmail, $CURRENT_USER_ID]);
         $_SESSION['user_email'] = $newEmail;
+        ActivityLogger::log($pdo, ActivityLogger::PROFILE_UPDATED, (int)$CURRENT_USER_ID, ['field' => 'email', 'email' => $newEmail]);
         json_out(true, ['message' => 'Email updated. Please verify your new address.']);
     } catch (Throwable $e) {
         error_log('profile update_email error: ' . $e->getMessage());
@@ -209,6 +212,7 @@ if ($action === 'change_password') {
         $hash = password_hash($new, PASSWORD_BCRYPT);
         $pdo->prepare('UPDATE users SET password = ? WHERE id = ?')
             ->execute([$hash, $CURRENT_USER_ID]);
+        ActivityLogger::log($pdo, ActivityLogger::PASSWORD_CHANGED, (int)$CURRENT_USER_ID, ['source' => 'profile']);
         json_out(true, ['message' => 'Password changed successfully.']);
     } catch (Throwable $e) {
         error_log('profile change_password error: ' . $e->getMessage());
@@ -245,6 +249,7 @@ if ($action === 'upload_avatar') {
             ->execute([$dataUrl, $CURRENT_USER_ID]);
 
         $_SESSION['profile_picture'] = $dataUrl;
+        ActivityLogger::log($pdo, ActivityLogger::PROFILE_UPDATED, (int)$CURRENT_USER_ID, ['field' => 'picture']);
         json_out(true, ['picture_url' => $dataUrl, 'message' => 'Profile picture updated.']);
     } catch (Throwable $e) {
         error_log('profile upload_avatar error: ' . $e->getMessage());

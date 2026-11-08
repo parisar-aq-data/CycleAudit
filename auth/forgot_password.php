@@ -16,6 +16,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../helpers/ActivityLogger.php';
 
 startSecureSession();
 
@@ -58,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = passwordRequestFindUser($pdo, $email);
             passwordRequestCreate($pdo, $user, $hash, $code, $clientIp);
             passwordRequestPrune($pdo);
+            ActivityLogger::log($pdo, ActivityLogger::PASSWORD_RESET_REQUESTED, $user['id'] ?? null, [
+                'email' => mb_substr($email, 0, 100), 'found' => $user !== null,
+            ]);
         } catch (Throwable $e) {
             // e.g. migration 026 has not been run yet
             error_log('forgot_password error: ' . $e->getMessage());

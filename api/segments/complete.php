@@ -8,6 +8,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../helpers/Validator.php';
 require_once __DIR__ . '/../../repositories/SegmentRepository.php';
@@ -85,6 +86,7 @@ try {
 
     // ── Auto-complete session if all segments done ─────────────
     $sessionRepo->autoCompleteIfReady($sessionId);
+    ActivityLogger::log($pdo, ActivityLogger::SEGMENT_COMPLETED, (int)$CURRENT_USER_ID, ['segment_id' => (int)$segmentId, 'session_id' => (int)$sessionId]);
 
     echo json_encode(['success' => true, 'already_completed' => false]);
 

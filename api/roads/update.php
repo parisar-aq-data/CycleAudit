@@ -9,6 +9,7 @@ declare(strict_types=1);
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/permissions.php';
 require_once __DIR__ . '/../../helpers/Validator.php';
@@ -79,6 +80,7 @@ try {
     gate('edit_road', $CURRENT_USER_ID, $CURRENT_USER_ROLE, ['owner_id' => $road['creator_id'], 'city_id' => $road['city_id']]);
 
     $repo->update($roadId, $CURRENT_USER_ID, $data);
+    ActivityLogger::log($pdo, ActivityLogger::ROAD_UPDATED, (int)$CURRENT_USER_ID, ['road_id' => (int)$roadId]);
 
     echo json_encode(['success' => true, 'road_id' => $roadId]);
 

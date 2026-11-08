@@ -17,6 +17,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../../config/admin_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/constants.php';
 // vendor/autoload.php is already loaded via config/constants.php.
 
@@ -100,6 +101,7 @@ try {
     $filename = 'CycleAudit-Roads-' . date('Y-m-d') . '.xlsx';
 
     header_remove('Content-Type');
+    ActivityLogger::log($pdo, ActivityLogger::EXPORT_DOWNLOADED, (int)$CURRENT_USER_ID, ['type' => 'roads_excel']);
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Cache-Control: max-age=0');

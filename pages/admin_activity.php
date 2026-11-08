@@ -3,15 +3,15 @@ declare(strict_types=1);
 
 // ═══════════════════════════════════════════════════════════════
 //  pages/admin_activity.php
-//  Activity Log — admin-only. Read-only viewer for the audit_log
-//  table (road create/delete actions written by api/admin/roads.php).
-//  Distinct from the surveyor-facing activity_log table — see the
-//  note in api/admin/activity_log.php.
+//  Activity Log — admin-only. Read-only record of who did what: sign-ins, passwords,
+//  users, projects, roads, segments, downloads and home page edits. The list comes
+//  from api/admin/activity_log.php (activity_log, plus the older road catalogue trail).
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../config/admin_guard.php';
 require_once __DIR__ . '/../helpers/RoleHome.php';
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../helpers/ActivityLogView.php';
 
 $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 1));
 ?>
@@ -42,9 +42,15 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 1));
     display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 700;
     padding: 4px 11px; border-radius: 999px; white-space: nowrap; text-transform: capitalize;
   }
-  .action-pill.create { background: var(--tsuccess-bg); color: var(--tsuccess-txt); }
-  .action-pill.delete { background: var(--tdanger-bg); color: var(--tdanger-txt); }
-  .action-pill.other  { background: var(--tseg-bg); color: var(--gray); }
+  .action-pill.good    { background: var(--tsuccess-bg); color: var(--tsuccess-txt); }
+  .action-pill.bad     { background: var(--tdanger-bg); color: var(--tdanger-txt); }
+  .action-pill.neutral { background: var(--tseg-bg); color: var(--gray); }
+  .act-role { display: block; font-size: 0.72rem; font-weight: 500; opacity: 0.55; }
+  .act-details { color: var(--ink); line-height: 1.45; min-width: 260px; }
+  .act-ip { font-size: 0.78rem; opacity: 0.55; white-space: nowrap; }
+  .act-more { text-align: center; padding: 16px 0 4px; }
+  .act-morebtn { padding: 9px 18px; border-radius: 8px; border: 1px solid rgba(127,127,127,0.35); background: transparent; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .act-morebtn:disabled { opacity: 0.5; cursor: default; }
 
   .act-filterbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
   .act-search {
@@ -91,18 +97,19 @@ document.addEventListener('click', e => {
     </button>
     <div class="topbar-left">
       <h2>Activity Log</h2>
-      <p style="margin-top:2px;">Road create/delete actions, newest first.</p>
+      <p style="margin-top:2px;">Who did what, newest first: sign-ins, passwords, users, projects, roads, segments, downloads and home page edits.</p>
     </div>
   </div>
 
   <div style="padding: 0 4px 4px;">
     <div class="card">
       <div class="act-filterbar">
-        <input type="text" id="actSearch" class="act-search" placeholder="Search by actor or road name…">
+        <input type="text" id="actSearch" class="act-search" placeholder="Search by person or what was done">
         <select id="actionFilter" class="act-action-filter">
-          <option value="all">All actions</option>
-          <option value="create">Created only</option>
-          <option value="delete">Deleted only</option>
+          <option value="all">Everything</option>
+<?php foreach (activityCategories() as $key => $label): ?>
+          <option value="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+<?php endforeach; ?>
         </select>
         <span id="filterCount" class="act-filtercount"></span>
       </div>
@@ -113,15 +120,17 @@ document.addEventListener('click', e => {
         <table class="act-table">
           <thead>
             <tr>
-              <th>Actor</th>
-              <th>Action</th>
-              <th>Road</th>
               <th>When</th>
+              <th>Who</th>
+              <th>Action</th>
+              <th>Details</th>
+              <th>IP</th>
             </tr>
           </thead>
           <tbody id="actTbody"></tbody>
         </table>
         <div id="noResults" class="act-empty" style="display:none;">No activity matches your search.</div>
+        <div class="act-more" id="moreWrap" style="display:none;"><button type="button" class="act-morebtn" id="moreBtn">Load older activity</button></div>
       </div>
     </div>
   </div>
@@ -131,7 +140,10 @@ document.addEventListener('click', e => {
 (function () {
   'use strict';
 
+  var PAGE = 200;
   var allEntries = [];
+  var hasMore = false;
+  var total = 0;
 
   function escapeHtml(str) {
     var div = document.createElement('div');
@@ -139,36 +151,15 @@ document.addEventListener('click', e => {
     return div.innerHTML;
   }
 
-  function fmtDate(iso) {
-    if (!iso) return '<span class="act-muted">—</span>';
-    try {
-      var d = new Date(iso.replace(' ', 'T'));
-      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) +
-        ' at ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    } catch (e) {
-      return escapeHtml(iso);
-    }
-  }
-
-  function actionPillClass(action) {
-    if (action === 'create') return 'create';
-    if (action === 'delete') return 'delete';
-    return 'other';
-  }
-
-  function actionLabel(action) {
-    if (action === 'create') return 'Created';
-    if (action === 'delete') return 'Deleted';
-    return action;
-  }
-
   function buildRow(e) {
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td class="act-actor">' + (e.actor_name ? escapeHtml(e.actor_name) : '<span class="act-muted">Unknown</span>') + '</td>' +
-      '<td><span class="action-pill ' + actionPillClass(e.action) + '">' + escapeHtml(actionLabel(e.action)) + '</span></td>' +
-      '<td class="act-road">' + escapeHtml(e.road_group_name) + '</td>' +
-      '<td class="act-when">' + fmtDate(e.created_at) + '</td>';
+      '<td class="act-when">' + escapeHtml(e.when) + '</td>' +
+      '<td class="act-actor">' + escapeHtml(e.actor_name) +
+        (e.actor_role ? '<span class="act-role">' + escapeHtml(e.actor_role) + '</span>' : '') + '</td>' +
+      '<td><span class="action-pill ' + escapeHtml(e.tone) + '">' + escapeHtml(e.label) + '</span></td>' +
+      '<td class="act-details">' + escapeHtml(e.details) + '</td>' +
+      '<td class="act-ip">' + escapeHtml(e.ip) + '</td>';
     return tr;
   }
 
@@ -181,38 +172,51 @@ document.addEventListener('click', e => {
 
   function applyFilter() {
     var q = document.getElementById('actSearch').value.trim().toLowerCase();
-    var actionFilter = document.getElementById('actionFilter').value;
+    var category = document.getElementById('actionFilter').value;
     var filtered = allEntries.filter(function (e) {
-      if (actionFilter !== 'all' && e.action !== actionFilter) return false;
-      return (e.actor_name || '').toLowerCase().indexOf(q) !== -1 ||
-             (e.road_group_name || '').toLowerCase().indexOf(q) !== -1;
+      if (category !== 'all' && e.category !== category) return false;
+      if (q === '') return true;
+      return (e.actor_name + ' ' + e.label + ' ' + e.details + ' ' + e.ip).toLowerCase().indexOf(q) !== -1;
     });
     render(filtered);
     document.getElementById('filterCount').textContent =
-      'Showing ' + filtered.length + ' of ' + allEntries.length + ' entries';
+      'Showing ' + filtered.length + ' of ' + allEntries.length + ' loaded (' + total + ' in the log)';
+    document.getElementById('moreWrap').style.display = hasMore ? 'block' : 'none';
+  }
+
+  function showError(msg) {
+    document.getElementById('loadingMsg').style.display = 'none';
+    var el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function load() {
+    var btn = document.getElementById('moreBtn');
+    btn.disabled = true;
+    fetch('../api/admin/activity_log.php?limit=' + PAGE + '&offset=' + allEntries.length,
+          { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        document.getElementById('loadingMsg').style.display = 'none';
+        btn.disabled = false;
+        if (!data.success) { showError(data.error || 'Could not load activity log.'); return; }
+        allEntries = allEntries.concat(data.entries);
+        hasMore = !!data.has_more;
+        total = data.total || allEntries.length;
+        document.getElementById('tableWrap').style.display = 'block';
+        applyFilter();
+      })
+      .catch(function () {
+        btn.disabled = false;
+        showError('Network error — could not load activity log.');
+      });
   }
 
   document.getElementById('actSearch').addEventListener('input', applyFilter);
   document.getElementById('actionFilter').addEventListener('change', applyFilter);
-
-  fetch('../api/admin/activity_log.php', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      document.getElementById('loadingMsg').style.display = 'none';
-      if (!data.success) {
-        document.getElementById('errorMsg').textContent = data.error || 'Could not load activity log.';
-        document.getElementById('errorMsg').style.display = 'block';
-        return;
-      }
-      allEntries = data.entries;
-      document.getElementById('tableWrap').style.display = 'block';
-      applyFilter();
-    })
-    .catch(function () {
-      document.getElementById('loadingMsg').style.display = 'none';
-      document.getElementById('errorMsg').textContent = 'Network error — could not load activity log.';
-      document.getElementById('errorMsg').style.display = 'block';
-    });
+  document.getElementById('moreBtn').addEventListener('click', load);
+  load();
 })();
 </script>
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">

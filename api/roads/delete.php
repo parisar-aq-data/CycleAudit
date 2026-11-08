@@ -16,6 +16,7 @@ set_exception_handler(function (Throwable $e) {
 });
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/permissions.php';
 require_once __DIR__ . '/../../helpers/Validator.php';
@@ -64,6 +65,7 @@ try {
     gate('delete_road', $CURRENT_USER_ID, $CURRENT_USER_ROLE, ['owner_id' => $road['creator_id'], 'city_id' => $road['city_id']]);
 
     $repo->delete($roadId);
+    ActivityLogger::log($pdo, ActivityLogger::ROAD_DELETED, (int)$CURRENT_USER_ID, ['road_id' => (int)$roadId, 'name' => (string)($road['name'] ?? '')]);
 
     echo json_encode(['success' => true]);
 

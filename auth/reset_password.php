@@ -9,6 +9,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../helpers/ActivityLogger.php';
 
 startSecureSession();
 
@@ -59,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($done) {
                 clearRateLimitAttempts($pdo, $clientIp, 'reset_token');
+                ActivityLogger::log($pdo, ActivityLogger::PASSWORD_RESET_COMPLETED, (int)$user['user_id']);
                 clearRateLimitAttempts($pdo, $clientIp, 'login');
                 header('Location: login.php?reset=1');
                 exit;
