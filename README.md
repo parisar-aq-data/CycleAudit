@@ -17,7 +17,6 @@
   <img src="https://img.shields.io/badge/PHP-8.1+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP" />
   <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
   <img src="https://img.shields.io/badge/JavaScript-323330?style=for-the-badge&logo=javascript&logoColor=F7DF1E" alt="JavaScript" />
-  <img src="https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white" alt="Leaflet" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white" alt="Railway" />
   <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
@@ -121,7 +120,6 @@ Road scores are **length-weighted** across their segments and are computed with 
 | Backend | PHP 8.1+ (strict types), PDO, no framework |
 | Database | MySQL 8 (utf8mb4, InnoDB) |
 | Frontend | Vanilla JavaScript, HTML, CSS |
-| Maps | Leaflet |
 | Reports | mPDF (PDF), PhpSpreadsheet (Excel) |
 | Auth | PHP sessions, `password_hash` / `password_verify` |
 | Config | `vlucas/phpdotenv` for local `.env`, environment variables in production |
@@ -151,7 +149,7 @@ Parisar/
 ├── repositories/            # Road, Segment, AuditSession data access
 ├── helpers/                 # Validator, StreakCalculator, ActivityLogger
 ├── js/                      # front-end modules (form-state, toast, loading-state, ...)
-├── css/                     # stylesheets, incl. Leaflet
+├── css/                     # stylesheets
 ├── migrations/              # SQL migrations 000 to 008
 ├── tests/                   # PHPUnit suites
 ├── scripts/backup.sh        # database backup job
