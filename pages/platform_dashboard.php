@@ -225,7 +225,8 @@ $today     = (new DateTime('now', new DateTimeZone('Asia/Kolkata')))->format('Y-
                 <?php else: ?><span class="pd-sub">No segments yet</span><?php endif; ?>
               </td>
               <td class="pd-nowrap"><?= $h(cityLocalTime($a['last_activity'])) ?></td>
-              <td><a class="pd-link" href="<?= $h(adminAuditLink($a)) ?>"><?= $a['status'] === 'awaiting_approval' ? 'Review' : 'Open' ?> →</a></td>
+              <td class="pd-nowrap pd-actions"><a class="pd-link" href="<?= $h(adminAuditLink($a)) ?>"><?= $a['status'] === 'awaiting_approval' ? 'Review' : 'Open' ?> →</a>
+                <button type="button" class="pd-link pd-link-danger dpDelete" data-id="<?= (int)$a['id'] ?>" data-name="<?= $h($a['name']) ?>">Delete</button></td>
             </tr>
           <?php endforeach; ?>
           </tbody>
@@ -262,9 +263,29 @@ $today     = (new DateTime('now', new DateTimeZone('Asia/Kolkata')))->format('Y-
   </div>
 </main>
 <div class="sb-overlay" id="sb-overlay"></div>
-<div class="ca-toast" id="caToast"></div>
+<div class="ca-modal-bg" id="dpDeleteBg" hidden>
+  <div class="ca-modal ap-modal" role="dialog" aria-modal="true" aria-labelledby="dpDelTitle">
+    <h3 id="dpDelTitle">Delete this project?</h3>
+    <p>This stops all work on <b id="dpDelName"></b> straight away and removes it from every dashboard. The City Leader and surveyors are told. The audit data stays in the database but cannot be opened from the app.</p>
+    <div class="ca-field">
+      <label for="dpDelConfirm">Type the project name to confirm</label>
+      <input id="dpDelConfirm" type="text" autocomplete="off">
+      <div class="ca-err"></div>
+    </div>
+    <div class="ca-field">
+      <label for="dpDelReason">Why are you deleting it? The City Leader and surveyors will see this.</label>
+      <textarea id="dpDelReason" rows="3" maxlength="200" placeholder="For example: duplicate of another project"></textarea>
+      <div class="ca-err"></div>
+    </div>
+    <div class="ca-modal-actions">
+      <button type="button" class="ca-btn ghost" id="dpDelCancel">Cancel</button>
+      <button type="button" class="ca-btn ca-btn-danger" id="dpDelGo" disabled>Delete project</button>
+    </div>
+  </div>
+</div>
 <script nonce="<?= $nonce ?>" src="../js/city_search.js?v=<?= filemtime(__DIR__ . '/../js/city_search.js') ?>"></script>
 <script nonce="<?= $nonce ?>" src="../js/admin_new_project.js?v=<?= filemtime(__DIR__ . '/../js/admin_new_project.js') ?>"></script>
+<script nonce="<?= $nonce ?>" src="../js/admin_dashboard_delete.js?v=<?= filemtime(__DIR__ . '/../js/admin_dashboard_delete.js') ?>"></script>
 <script nonce="<?= $nonce ?>">
 const tog = document.getElementById('sb-toggle'), ovl = document.getElementById('sb-overlay'), aside = document.querySelector('aside');
 tog.addEventListener('click', () => { aside.classList.add('open'); ovl.classList.add('show'); });
