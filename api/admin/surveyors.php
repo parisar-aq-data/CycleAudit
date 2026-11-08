@@ -8,6 +8,7 @@ set_exception_handler(function (Throwable $e) {
     exit;
 });
 require_once __DIR__ . '/../../config/admin_guard.php';
+require_once __DIR__ . '/../../helpers/PrimaryAdmin.php';
 require_once __DIR__ . '/../../helpers/Cities.php';
 require_once __DIR__ . '/../../helpers/CityLeaderAssign.php';
 require_once __DIR__ . '/../../helpers/ActivityLogger.php';
@@ -53,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     );
     $stmt->execute($params);
     $surveyors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $primaryAdminId = primaryAdminId($pdo);
     foreach ($surveyors as &$s) {
         $s['id']               = (int)$s['id'];
         $s['city_id']          = $s['city_id'] !== null ? (int)$s['city_id'] : null;
@@ -60,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $s['segments_audited'] = (int)$s['segments_audited'];
         $s['is_active']        = (bool)$s['is_active'];
         $s['is_current_user']  = $s['id'] === $CURRENT_USER_ID;
+        $s['is_primary_admin'] = $primaryAdminId !== null && $s['id'] === $primaryAdminId;
         $s['has_profile_picture'] = $s['profile_picture'] !== null && $s['profile_picture'] !== '';
         unset($s['profile_picture']);
     }
@@ -108,6 +111,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$target) {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'User not found.']);
+        exit;
+    }
+
+    // Only the original Admin may change the original Admin's account.
+    $protected = primaryAdminProtectionError($CURRENT_USER_ID, primaryAdminId($pdo), (int)$targetId);
+    if ($protected !== null) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => $protected]);
         exit;
     }
 
