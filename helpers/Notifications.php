@@ -144,3 +144,157 @@ function projectUnassignedNotificationText(string $auditName): array
         'body'  => 'The Admin assigned the project "' . $auditName . '" to another City Leader. It no longer appears on your dashboard.',
     ];
 }
+
+// ── Removing a surveyor who still has work (helpers/SurveyorRemoval.php) ──
+
+const NOTIFY_REMOVAL = 'surveyor_removal';
+/** Progress of the work itself: submitted, approved, sent back, audit opened / closed. */
+const NOTIFY_WORK = 'work_status';
+
+/**
+ * What the surveyor is told when they are removed.
+ *
+ * @param string $mode 'now' (gone straight away) | 'wait' (finish the started segments first)
+ * @param string $action 'team' | 'deactivate'
+ * @return array{title:string, body:string}
+ */
+function surveyorRemovedNotificationText(string $mode, string $action, int $released, int $kept): array
+{
+    $back = $released > 0
+        ? ' The ' . notifyPlural($released, 'segment', 'segments') . ' you had not started ' . ($released === 1 ? 'was' : 'were') . ' taken off your dashboard.'
+        : '';
+    $what = $action === 'deactivate' ? 'You were removed from Parisar.' : 'You were removed from your City Leader\'s team.';
+    if ($mode === 'wait') {
+        return [
+            'title' => 'Finish your work, then you are removed',
+            'body'  => $what . ' Please finish the ' . notifyPlural($kept, 'segment', 'segments') . ' you already started.'
+                     . ' The removal takes effect once you submit ' . ($kept === 1 ? 'it' : 'them') . '.' . $back,
+        ];
+    }
+    return [
+        'title' => $action === 'deactivate' ? 'Your account was deactivated' : 'Removed from the team',
+        'body'  => $what . $back,
+    ];
+}
+
+/** What the surveyor is told once their last started segment is in and the removal happens. */
+function surveyorRemovalDoneNotificationText(string $action): array
+{
+    return [
+        'title' => 'Removal complete',
+        'body'  => $action === 'deactivate'
+            ? 'You submitted all your started segments, so your account is now deactivated. Thank you for your audits.'
+            : 'You submitted all your started segments, so you are no longer in your City Leader\'s team. Thank you for your audits.',
+    ];
+}
+
+/** What a City Leader is told about segments that went back to unassigned. */
+function surveyorRemovalLeaderNotificationText(string $surveyorName, string $auditName, int $released): array
+{
+    return [
+        'title' => 'Segments are unassigned again',
+        'body'  => $surveyorName . ' was removed. ' . notifyPlural($released, 'segment', 'segments') . ' in the audit "' . $auditName
+                 . '" ' . ($released === 1 ? 'is' : 'are') . ' unassigned again. Assign ' . ($released === 1 ? 'it' : 'them') . ' to another surveyor.',
+    ];
+}
+
+/** What a City Leader is told when the removal has to wait for started work. */
+function surveyorRemovalWaitingNotificationText(string $surveyorName, int $kept): array
+{
+    return [
+        'title' => 'Removal waiting for work in progress',
+        'body'  => $surveyorName . ' has ' . notifyPlural($kept, 'segment', 'segments') . ' in progress. They are removed automatically once they submit '
+                 . ($kept === 1 ? 'it' : 'them') . '.',
+    ];
+}
+
+/** What a City Leader is told when the waiting removal happens. */
+function surveyorRemovalDoneLeaderNotificationText(string $surveyorName): array
+{
+    return [
+        'title' => 'Surveyor removed',
+        'body'  => $surveyorName . ' submitted their last started segment and has now been removed.',
+    ];
+}
+
+// ── Progress of the work ─────────────────────────────────────
+
+/** City Leader: a surveyor submitted a segment. */
+function segmentSubmittedNotificationText(string $surveyorName, string $auditName): array
+{
+    return [
+        'title' => 'Segment submitted',
+        'body'  => $surveyorName . ' submitted a segment in the audit "' . $auditName . '". It is waiting for your review.',
+    ];
+}
+
+/** Surveyor: the City Leader approved their segment. */
+function segmentApprovedNotificationText(string $auditName): array
+{
+    return [
+        'title' => 'Segment approved',
+        'body'  => 'Your City Leader approved a segment you submitted in the audit "' . $auditName . '".',
+    ];
+}
+
+/**
+ * Surveyor: a segment was sent back for a revisit.
+ * @param bool $handedOver true for the surveyor who is given the segment by someone else's send-back
+ */
+function segmentSentBackNotificationText(string $auditName, string $note, bool $handedOver): array
+{
+    $note = mb_substr(trim($note), 0, 250);
+    return [
+        'title' => 'Segment needs a revisit',
+        'body'  => ($handedOver
+                ? 'Your City Leader gave you a segment to re-audit in "' . $auditName . '".'
+                : 'Your City Leader sent a segment back in the audit "' . $auditName . '".')
+                . ($note !== '' ? ' Note: ' . $note : ''),
+    ];
+}
+
+/** Surveyor: the audit they were assigned to is now open. */
+function auditActivatedNotificationText(string $auditName, int $segments): array
+{
+    return [
+        'title' => 'Audit is open',
+        'body'  => 'The audit "' . $auditName . '" is now active. You can start your ' . notifyPlural($segments, 'segment', 'segments') . ' from your dashboard.',
+    ];
+}
+
+/** Surveyor: the City Leader closed the audit. */
+function auditClosedNotificationText(string $auditName): array
+{
+    return [
+        'title' => 'Audit closed',
+        'body'  => 'The audit "' . $auditName . '" was closed. Thank you for your work.',
+    ];
+}
+
+/** Admin: a City Leader sent an audit for approval. */
+function auditSentToAdminNotificationText(string $auditName, string $cityName): array
+{
+    return [
+        'title' => 'Audit waiting for approval',
+        'body'  => 'The City Leader of ' . $cityName . ' sent the audit "' . $auditName . '" for your approval.',
+    ];
+}
+
+/** City Leader: the Admin approved the audit. */
+function auditApprovedNotificationText(string $auditName): array
+{
+    return [
+        'title' => 'Audit approved',
+        'body'  => 'The Admin approved the audit "' . $auditName . '". It is now published.',
+    ];
+}
+
+/** City Leader: the Admin sent the audit back. */
+function auditReturnedNotificationText(string $auditName, string $note): array
+{
+    $note = mb_substr(trim($note), 0, 250);
+    return [
+        'title' => 'Audit returned',
+        'body'  => 'The Admin sent the audit "' . $auditName . '" back for changes.' . ($note !== '' ? ' Note: ' . $note : ''),
+    ];
+}

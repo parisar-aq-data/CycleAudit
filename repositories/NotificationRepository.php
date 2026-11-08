@@ -42,6 +42,44 @@ class NotificationRepository
         }
     }
 
+    /**
+     * Send one notification to several people. One failing insert never stops the rest,
+     * and a failure here must never undo the action that caused it.
+     *
+     * @param list<int> $userIds
+     */
+    public function tellMany(array $userIds, string $type, string $title, string $body, ?string $link = null): void
+    {
+        foreach (array_unique(array_map('intval', $userIds)) as $uid) {
+            if ($uid < 1) {
+                continue;
+            }
+            try {
+                $this->create($uid, $type, $title, $body, $link);
+            } catch (Throwable $e) {
+                error_log('NotificationRepository::tellMany failed: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /** @return list<int> every active Admin */
+    public function activeAdminIds(): array
+    {
+        return array_map('intval', $this->pdo->query("SELECT id FROM users WHERE role = 'admin' AND is_active = 1")->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /** @return array<int,int> surveyor id => how many segments they hold in this audit */
+    public function surveyorsOfAudit(int $auditId): array
+    {
+        $q = $this->pdo->prepare('SELECT surveyor_id, COUNT(*) AS n FROM segment_assignments WHERE audit_id = ? GROUP BY surveyor_id');
+        $q->execute([$auditId]);
+        $out = [];
+        foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[(int)$r['surveyor_id']] = (int)$r['n'];
+        }
+        return $out;
+    }
+
     /** Newest unread notifications first.
      *  @return list<array{id:int,type:string,title:string,body:string,link:?string,created_at:string,is_read:bool}> */
     public function unread(int $userId, int $limit = 20): array

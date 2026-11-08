@@ -84,6 +84,11 @@ try {
     foreach (array_unique($targets) as $uid) {
         $notes->create((int)$uid, NOTIFY_PROJECT_DELETED, $t['title'], $t['body'], null);
     }
+    // A surveyor whose removal was waiting on this project's work may be free to go now.
+    require_once __DIR__ . '/../../helpers/WorkNotify.php';
+    foreach (array_unique($surveyorIds) as $sid) {
+        workFinishRemovalIfDone($pdo, (int)$sid);
+    }
 } catch (Throwable $e) {
     error_log('project delete notification failed: ' . $e->getMessage());
 }

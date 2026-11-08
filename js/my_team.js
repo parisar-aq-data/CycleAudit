@@ -48,7 +48,9 @@
       return li;
     }
     if (r.state === 'free') { li.appendChild(el('span', 'tm-tag', 'No team yet')); }
-    var b = el('button', 'tm-btn' + (r.state === 'mine' ? ' tm-remove' : ''), r.state === 'mine' ? 'Remove' : 'Add to my team');
+    if (r.state === 'mine' && r.removal_pending) { li.appendChild(el('span', 'tm-tag', 'Leaving after current work')); }
+    var b = el('button', 'tm-btn' + (r.state === 'mine' ? ' tm-remove' : ''),
+      r.state === 'mine' ? (r.removal_pending ? 'Cancel removal' : 'Remove') : 'Add to my team');
     b.type = 'button';
     b.disabled = !!busy[r.id];
     b.addEventListener('click', function () { change(r); });
@@ -101,15 +103,20 @@
   }
 
   function change(r) {
-    var adding = r.state !== 'mine';
+    var adding = r.state !== 'mine' || !!r.removal_pending;   // "Cancel removal" adds them back
     busy[r.id] = true; say('', false); render();
     post({ action: adding ? 'add' : 'remove', user_id: r.id })
       .then(function (res) {
         delete busy[r.id];
         if (res && res.success) {
-          r.state = adding ? 'mine' : 'free';
+          if (!adding && res.mode === 'wait') {
+            r.removal_pending = true;          // stays in the team until the started segments are in
+          } else {
+            r.state = adding ? 'mine' : 'free';
+            r.removal_pending = false;
+          }
           r.other_leader = null;
-          say(r.name + (adding ? ' is now in your team.' : ' was removed from your team.'), false);
+          say(res.message || (r.name + (adding ? ' is now in your team.' : ' was removed from your team.')), false);
         } else {
           say((res && res.error) || 'Something went wrong. Please try again.', true);
         }

@@ -536,6 +536,10 @@ class CityAuditRepository
         if ((int)$stmt->fetchColumn() === 0) {
             throw new DomainException('That surveyor is not an active surveyor in this city.');
         }
+        require_once __DIR__ . '/SurveyorRemovalRepository.php';
+        if ((new SurveyorRemovalRepository($this->pdo))->isPending($surveyorId)) {
+            throw new DomainException('That surveyor is being removed and cannot be given new segments.');
+        }
         [$scope, $scopeArgs] = teamScope($this->pdo, $cityId, $leaderId);
         if ($scope !== '') {
             $t = $this->pdo->prepare('SELECT COUNT(*) FROM users WHERE id = ?' . $scope);

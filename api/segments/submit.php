@@ -27,6 +27,7 @@ require_once __DIR__ . '/../../helpers/Validator.php';
 require_once __DIR__ . '/../../helpers/SegmentAnswers.php';
 require_once __DIR__ . '/../../repositories/AuditSessionRepository.php';
 require_once __DIR__ . '/../../repositories/SurveyorWorkRepository.php';
+require_once __DIR__ . '/../../helpers/WorkNotify.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -411,6 +412,12 @@ try {
 
     // ── 8. COMMIT ──────────────────────────────────────────────
     $pdo->commit();
+
+    // Tell the City Leader, and finish a removal that was waiting for this surveyor's last segment.
+    // Never lets a notification problem fail a submission that is already saved.
+    if (!$editMode) {
+        workAfterSubmit($pdo, $segmentId, (int)$CURRENT_USER_ID);
+    }
 
     echo json_encode([
         'success'   => true,

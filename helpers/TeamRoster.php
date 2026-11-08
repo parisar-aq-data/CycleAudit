@@ -25,7 +25,9 @@ declare(strict_types=1);
  * state: 'mine' (in this leader's team), 'free' (no team, or the old leader is
  * gone), 'other' (in another City Leader's team; other_leader names them).
  *
- * @return list<array{id:int,name:string,email:string,state:string,other_leader:?string}>
+ * removal_pending: true while the surveyor finishes started segments before leaving the team.
+ *
+ * @return list<array{id:int,name:string,email:string,state:string,other_leader:?string,removal_pending:bool}>
  */
 function teamRoster(PDO $pdo, int $leaderId, int $cityId): array
 {
@@ -40,6 +42,14 @@ function teamRoster(PDO $pdo, int $leaderId, int $cityId): array
           ORDER BY s.name ASC, s.id ASC"
     );
     $st->execute([$cityId]);
+    $waiting = [];
+    try {
+        $w = $pdo->prepare('SELECT id FROM users WHERE city_id = ? AND removal_pending_at IS NOT NULL');
+        $w->execute([$cityId]);
+        $waiting = array_flip(array_map('intval', $w->fetchAll(PDO::FETCH_COLUMN)));
+    } catch (Throwable $e) {
+        $waiting = [];   // migration 031 not applied yet: nobody is waiting
+    }
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $leader = $r['tl_id'] !== null ? (int)$r['tl_id'] : null;
@@ -49,6 +59,7 @@ function teamRoster(PDO $pdo, int $leaderId, int $cityId): array
             'email'        => (string)$r['email'],
             'state'        => $leader === null ? 'free' : ($leader === $leaderId ? 'mine' : 'other'),
             'other_leader' => ($leader !== null && $leader !== $leaderId) ? (string)$r['tl_name'] : null,
+            'removal_pending' => isset($waiting[(int)$r['id']]),
         ];
     }
     return $out;

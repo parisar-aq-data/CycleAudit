@@ -22,6 +22,7 @@ require_once __DIR__ . '/../../helpers/CityApi.php';
 require_once __DIR__ . '/../../helpers/CityAudit.php';
 require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../repositories/CityAuditRepository.php';
+require_once __DIR__ . '/../../helpers/WorkNotify.php';
 
 $body = cityApiContext($CURRENT_USER_ROLE, $CURRENT_USER_CITY_ID);
 $repo = new CityAuditRepository($pdo);
@@ -40,5 +41,6 @@ try {
 }
 
 ActivityLogger::log($pdo, ActivityLogger::AUDIT_ACTIVATED, $CURRENT_USER_ID, ['audit_id' => (int)$audit['id']]);
+workNotifyActivated($pdo, $audit);
 
 echo json_encode(['success' => true, 'status' => 'active']);
