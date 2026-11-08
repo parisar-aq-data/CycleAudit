@@ -8,6 +8,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../helpers/ActivityLogger.php';
 
 startSecureSession();
 
@@ -49,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user && $passwordOk) {
                 if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
                     $error = 'This account has been deactivated. Please contact an administrator.';
+                    ActivityLogger::log($pdo, ActivityLogger::USER_LOGIN_FAILED, (int)$user['id'], ['email' => mb_substr($email, 0, 100), 'reason' => 'deactivated']);
                 } else {
                 // ── Successful local login ─────────────────────
                 clearRateLimitAttempts($pdo, $clientIp, 'login');
@@ -69,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update last_login timestamp
                 $pdo->prepare('UPDATE users SET last_login = NOW() WHERE id = ?')
                     ->execute([$user['id']]);
+                ActivityLogger::log($pdo, ActivityLogger::USER_LOGIN, (int)$user['id']);
 
                 header('Location: ../pages/dashboard.php');
                 exit;
@@ -76,6 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Wrong password or unknown email — record the failure
                 recordFailedAttempt($pdo, $clientIp, 'login');
+                ActivityLogger::log($pdo, ActivityLogger::USER_LOGIN_FAILED, $user ? (int)$user['id'] : null, [
+                    'email' => mb_substr($email, 0, 100), 'reason' => $user ? 'wrong_password' : 'unknown_email',
+                ]);
                 $remaining = remainingAttempts($pdo, $clientIp, 'login');
 
                 $error = 'Invalid email or password. Please try again.';

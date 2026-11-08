@@ -16,6 +16,7 @@ set_exception_handler(function (Throwable $e) {
 });
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../helpers/Validator.php';
 require_once __DIR__ . '/../../repositories/RoadRepository.php';
@@ -147,6 +148,7 @@ if (!isAnyAdmin($CURRENT_USER_ROLE)) {
 
 try {
     $result = $repo->create($CURRENT_USER_ID, $data, $auditCityId);
+    ActivityLogger::log($pdo, ActivityLogger::ROAD_CREATED, (int)$CURRENT_USER_ID, ['road_id' => (int)$result['road_id'], 'name' => (string)($data['name'] ?? '')]);
 
     echo json_encode([
         'success'   => true,

@@ -13,6 +13,7 @@ declare(strict_types=1);
 // ---------------------------------------------------------------
 
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../helpers/ActivityLogger.php';
 
 startSecureSession();
 enforceSessionTimeout();
@@ -68,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if (staffPasswordSetOwn($pdo, $userId, $password)) {
+                    ActivityLogger::log($pdo, ActivityLogger::PASSWORD_CHANGED, $userId, ['source' => 'first_login']);
                     header('Location: ../pages/dashboard.php');
                     exit;
                 }

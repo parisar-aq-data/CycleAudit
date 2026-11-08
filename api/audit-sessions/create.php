@@ -16,6 +16,7 @@ set_exception_handler(function (Throwable $e) {
 });
 
 require_once __DIR__ . '/../../config/auth_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../helpers/Validator.php';
 require_once __DIR__ . '/../../repositories/RoadRepository.php';
@@ -109,6 +110,7 @@ try {
 
     // Create new session
     $result = $repo->createSession($CURRENT_USER_ID, $roadId);
+    ActivityLogger::log($pdo, ActivityLogger::SESSION_STARTED, (int)$CURRENT_USER_ID, ['road_id' => (int)$roadId, 'session_id' => (int)$result['session_id']]);
 
     echo json_encode([
         'success'    => true,

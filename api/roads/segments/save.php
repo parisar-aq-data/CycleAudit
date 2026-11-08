@@ -17,6 +17,7 @@ set_exception_handler(function (Throwable $e) {
 });
 
 require_once __DIR__ . '/../../../config/auth_guard.php';
+require_once __DIR__ . '/../../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../../config/db.php';
 require_once __DIR__ . '/../../../config/permissions.php';
 require_once __DIR__ . '/../../../helpers/Validator.php';
@@ -116,6 +117,7 @@ try {
     }
 
     $pdo->commit();
+    ActivityLogger::log($pdo, ActivityLogger::ROAD_SEGMENTS_SAVED, (int)$CURRENT_USER_ID, ['road_id' => (int)$roadId, 'segments' => $saved]);
 
     echo json_encode(['success' => true, 'segments_saved' => $saved]);
 

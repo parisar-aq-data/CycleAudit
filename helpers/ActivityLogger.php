@@ -50,6 +50,23 @@ class ActivityLogger
     public const PASSWORD_REQUEST_DISMISSED = 'password_request_dismissed';
     public const TEAM_MEMBER_ADDED          = 'team_member_added';
     public const TEAM_MEMBER_REMOVED        = 'team_member_removed';
+    // Sign-in, accounts, passwords
+    public const USER_LOGIN_FAILED          = 'user_login_failed';
+    public const PROFILE_UPDATED            = 'profile_updated';
+    public const PASSWORD_CHANGED           = 'password_changed';
+    public const PASSWORD_RESET_REQUESTED   = 'password_reset_requested';
+    public const PASSWORD_RESET_COMPLETED   = 'password_reset_completed';
+    public const USER_PASSWORD_RESET        = 'user_password_reset';
+    public const USER_ACTIVATED             = 'user_activated';
+    public const USER_DEACTIVATED           = 'user_deactivated';
+    // Roads, segments, field work
+    public const ROAD_UPDATED               = 'road_updated';
+    public const ROAD_SEGMENTS_SAVED        = 'road_segments_saved';
+    public const SEGMENT_COMPLETED          = 'segment_completed';
+    public const SEGMENT_RESET              = 'segment_reset';
+    public const SEGMENT_UNLOCKED           = 'segment_unlocked';
+    // Files downloaded (meta.type says which)
+    public const EXPORT_DOWNLOADED          = 'export_downloaded';
 
     /**
      * Log an activity.

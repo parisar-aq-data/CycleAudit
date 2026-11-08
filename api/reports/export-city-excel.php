@@ -19,6 +19,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/../../config/admin_guard.php';
+require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../services/ScoreService.php';
 require_once __DIR__ . '/../../config/rate_limit.php';
@@ -309,6 +310,7 @@ try {
     $safeName = preg_replace('/-+/', '-', trim($safeName, '-'));
     $filename = 'CycleAudit-ScoreSheet-' . $safeName . '-' . date('Y-m-d') . '.xlsx';
 
+    ActivityLogger::log($pdo, ActivityLogger::EXPORT_DOWNLOADED, (int)$CURRENT_USER_ID, ['type' => 'city_excel', 'city_id' => (int)$cityId]);
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Cache-Control: max-age=0');
