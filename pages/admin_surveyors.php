@@ -180,7 +180,7 @@ document.addEventListener('click', e => {
   function buildRow(s) {
     var tr = document.createElement('tr');
     var roleBadge = s.role === 'admin'
-      ? '<span class="admin-badge">Admin</span>'
+      ? '<span class="admin-badge">Admin</span>' + (s.is_primary_admin ? ' <span class="surv-muted" style="font-size:.72rem;">Original</span>' : '')
       : s.role === 'city_leader'
         ? '<span class="admin-badge" style="background:#eef2ff;color:#4338ca;">City Leader</span>'
         : '<span style="color:#6b7280;font-size:.78rem;">Surveyor</span>';
@@ -190,7 +190,8 @@ document.addEventListener('click', e => {
     var roleBtn = '';
     // Only the Admin changes roles (creates City Leaders); the
     // API enforces this too. City Leaders only manage surveyors.
-    if (!s.is_current_user && IS_NATIONAL_ADMIN) {
+    var locked = !!s.is_primary_admin && !s.is_current_user; // only the original Admin can change this account
+    if (!s.is_current_user && IS_NATIONAL_ADMIN && !locked) {
       roleBtn = ' <select class="role-select" data-id="' + s.id + '" data-role="' + s.role + '">' +
         roleOptions.map(function (r) {
           return '<option value="' + r + '"' + (r === s.role ? ' selected' : '') + '>' + ROLE_LABELS[r] + '</option>';
@@ -219,12 +220,12 @@ document.addEventListener('click', e => {
       cityCell += '<td>' + (said ? escapeHtml(said) : '<span class="surv-muted">&mdash;</span>') + '</td>';
     }
     // City Leaders may only (de)activate surveyors; the API enforces this.
-    var toggleBtn = (IS_NATIONAL_ADMIN || s.role === 'surveyor')
+    var toggleBtn = (!locked && (IS_NATIONAL_ADMIN || s.role === 'surveyor'))
       ? '<button class="toggle-status-btn" data-id="' + s.id + '" data-active="' + (s.removal_pending ? 'false' : s.is_active) + '" data-pending="' + (s.removal_pending ? '1' : '') + '">' + (s.removal_pending ? 'Cancel removal' : (s.is_active ? 'Deactivate' : 'Reactivate')) + '</button>'
       : '';
     // Reset password: Admin on anyone but themselves, City Leader on surveyors.
     // The API enforces this too, and refuses deactivated accounts (reactivate first).
-    var resetBtn = (s.is_active && !s.is_current_user && (IS_NATIONAL_ADMIN || s.role === 'surveyor'))
+    var resetBtn = (s.is_active && !s.is_current_user && !locked && (IS_NATIONAL_ADMIN || s.role === 'surveyor'))
       ? ' <button class="reset-pw-btn" type="button" data-id="' + s.id + '">Reset password</button>'
       : '';
     tr.innerHTML =

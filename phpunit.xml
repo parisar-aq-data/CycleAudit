@@ -17,6 +17,7 @@
             <file>tests/UserPublicIdTest.php</file>
             <file>tests/RoleHomeTest.php</file>
             <file>tests/RoleRulesTest.php</file>
+            <file>tests/PrimaryAdminTest.php</file>
             <file>tests/StaffPasswordResetTest.php</file>
             <file>tests/PasswordRequestTest.php</file>
             <file>tests/TeamRosterTest.php</file>
