@@ -232,10 +232,31 @@ class ProjectAdminTest extends TestCase
         $this->assertStringContainsString('"Pune Audit"', $d['body']);
         $this->assertStringContainsString('Work on it has stopped', $d['body']);
 
+        // With a reason, the reason is in the message; without one the message is unchanged.
+        $r = projectDeletedNotificationText('Pune Audit', 'Duplicate of the Bengaluru audit');
+        $this->assertStringContainsString('Reason: Duplicate of the Bengaluru audit', $r['body']);
+        $this->assertStringNotContainsString('Reason:', $d['body']);
+        $long = projectDeletedNotificationText(str_repeat('A', 150), str_repeat('b', 200));
+        $this->assertLessThanOrEqual(500, mb_strlen($long['body']));
+
         $this->assertStringContainsString('name of the project', projectUpdatedNotificationText('X', ['name'])['body']);
         $this->assertStringContainsString('name, audit date and programme info', projectUpdatedNotificationText('X', ['name', 'audit date', 'programme info'])['body']);
 
         $this->assertSame('You are now City Leader', cityLeaderChangedNotificationText('Pune', true)['title']);
         $this->assertStringContainsString('Surveyor', cityLeaderChangedNotificationText('Pune', false)['body']);
+    }
+
+    // ── reason for deleting ─────────────────────────────────────
+
+    public function test_delete_reason_rules(): void
+    {
+        $this->assertSame('Duplicate project', projectDeleteReasonClean("  Duplicate \n\t project \x07 "));
+        $this->assertSame('', projectDeleteReasonClean(null));
+        $this->assertSame('', projectDeleteReasonClean(['x']));
+        $this->assertIsString(projectDeleteReasonError(''));
+        $this->assertIsString(projectDeleteReasonError('abcd'));
+        $this->assertNull(projectDeleteReasonError('abcde'));
+        $this->assertNull(projectDeleteReasonError(str_repeat('x', 200)));
+        $this->assertIsString(projectDeleteReasonError(str_repeat('x', 201)));
     }
 }

@@ -600,6 +600,11 @@ $barClass = static fn(float $v): string => cityScoreBarClass($v);
       <input id="apDelConfirm" type="text" autocomplete="off" placeholder="<?= $h($audit['name']) ?>" data-name="<?= $h($audit['name']) ?>">
       <div class="ca-err"></div>
     </div>
+    <div class="ca-field">
+      <label for="apDelReason">Why are you deleting it? The City Leader and surveyors will see this.</label>
+      <textarea id="apDelReason" rows="3" maxlength="200" placeholder="For example: duplicate of another project"></textarea>
+      <div class="ca-err"></div>
+    </div>
     <div class="ca-modal-actions">
       <button type="button" class="ca-btn ghost" id="apDelCancel">Cancel</button>
       <button type="button" class="ca-btn ca-btn-danger" id="apDelGo" disabled>Delete project</button>

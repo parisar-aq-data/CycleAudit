@@ -111,7 +111,12 @@
   var title = document.getElementById('pubConfTitle'), text = document.getElementById('pubConfText');
   var nameWrap = document.getElementById('pubConfNameWrap'), nameInput = document.getElementById('pubConfName');
   var goBtn = document.getElementById('pubConfGo');
+  var reasonWrap = document.getElementById('pubConfReasonWrap'), reasonInput = document.getElementById('pubConfReason');
   var action = null;
+  function ready() {
+    if (!action || !action.typeName) return true;
+    return nameInput.value.trim() === action.name && reasonInput.value.trim().length >= 5;
+  }
 
   function ask(cfg) {
     action = cfg;
@@ -122,13 +127,14 @@
     nameWrap.hidden = !cfg.typeName;
     nameInput.value = '';
     nameInput.placeholder = cfg.name;
+    reasonWrap.hidden = !cfg.typeName;
+    reasonInput.value = '';
     goBtn.disabled = !!cfg.typeName;
     open(confBg);
     if (cfg.typeName) nameInput.focus(); else goBtn.focus();
   }
-  nameInput.addEventListener('input', function () {
-    goBtn.disabled = !(action && action.typeName && nameInput.value.trim() === action.name);
-  });
+  nameInput.addEventListener('input', function () { goBtn.disabled = !ready(); });
+  reasonInput.addEventListener('input', function () { goBtn.disabled = !ready(); });
   document.getElementById('pubConfCancel').addEventListener('click', function () { close(confBg); });
 
   document.querySelectorAll('.pubUnpublish').forEach(function (b) {
@@ -164,7 +170,7 @@
         ask({
           title: 'Delete this audit?', name: name, danger: true, typeName: true, button: 'Delete audit',
           text: '“' + name + '” is removed from the home page and from every dashboard, and all work on it stops. The City Leader and surveyors are told. The data stays in the database but cannot be opened from the app. To keep it and only hide it, use Unpublish instead.',
-          run: function () { return send('../api/admin/audit_delete.php', { audit_id: id, confirm_name: nameInput.value }); }, done: 'project_deleted_ok'
+          run: function () { return send('../api/admin/audit_delete.php', { audit_id: id, confirm_name: nameInput.value, reason: reasonInput.value }); }, done: 'project_deleted_ok'
         });
       }
     });
@@ -177,7 +183,7 @@
       reload(action.done);
     } catch (err) {
       toast(err.message, 'error');
-      goBtn.disabled = action.typeName && nameInput.value.trim() !== action.name;
+      goBtn.disabled = !ready();
     }
   });
 })();

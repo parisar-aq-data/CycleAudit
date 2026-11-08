@@ -93,26 +93,28 @@
   var confirmInput = document.getElementById('apDelConfirm');
   var goBtn = document.getElementById('apDelGo');
   var expected = confirmInput.getAttribute('data-name') || '';
+  var reasonInput = document.getElementById('apDelReason');
+  function delReady() { return confirmInput.value.trim() === expected && reasonInput.value.trim().length >= 5; }
   document.getElementById('apDeleteBtn').addEventListener('click', function () {
     confirmInput.value = '';
+    reasonInput.value = '';
     goBtn.disabled = true;
     open(delBg);
     confirmInput.focus();
   });
   document.getElementById('apDelCancel').addEventListener('click', function () { close(delBg); });
-  confirmInput.addEventListener('input', function () {
-    goBtn.disabled = confirmInput.value.trim() !== expected;
-  });
+  confirmInput.addEventListener('input', function () { goBtn.disabled = !delReady(); });
+  reasonInput.addEventListener('input', function () { goBtn.disabled = !delReady(); });
   goBtn.addEventListener('click', async function () {
     goBtn.disabled = true;
     try {
-      await post('../api/admin/audit_delete.php', { audit_id: AUDIT_ID, confirm_name: confirmInput.value });
+      await post('../api/admin/audit_delete.php', { audit_id: AUDIT_ID, confirm_name: confirmInput.value, reason: reasonInput.value });
       window.location.href = 'platform_dashboard.php?notice=project_deleted_ok';
     } catch (e) {
       var wrap = confirmInput.closest('.ca-field');
       if (wrap) { wrap.classList.add('bad'); var er = wrap.querySelector('.ca-err'); if (er) er.textContent = e.message; }
       toast(e.message, 'error');
-      goBtn.disabled = confirmInput.value.trim() !== expected;
+      goBtn.disabled = !delReady();
     }
   });
 })();

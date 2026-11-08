@@ -46,6 +46,13 @@ if ($typed === '' || !hash_equals((string)$audit['name'], $typed)) {
     cityApiFail(422, 'The name you typed does not match this project. Nothing was deleted.', ['errors' => ['confirm_name' => 'Type the project name exactly.']]);
 }
 
+// The Admin must say why. The reason goes to the City Leader and the surveyors.
+$reason = projectDeleteReasonClean($body['reason'] ?? '');
+$reasonError = projectDeleteReasonError($reason);
+if ($reasonError !== null) {
+    cityApiFail(422, $reasonError, ['errors' => ['reason' => $reasonError]]);
+}
+
 $impact      = $repo->deletionImpact((int)$audit['id']);
 $surveyorIds = $repo->assignedSurveyorIds((int)$audit['id']);
 $leaderId    = $audit['leader_user_id'] !== null ? (int)$audit['leader_user_id'] : null;
@@ -69,14 +76,14 @@ try {
 }
 
 ActivityLogger::log($pdo, ActivityLogger::AUDIT_DELETED, $CURRENT_USER_ID, [
-    'audit_id' => (int)$audit['id'], 'city_id' => (int)$audit['city_id'], 'name' => (string)$audit['name'],
+    'audit_id' => (int)$audit['id'], 'city_id' => (int)$audit['city_id'], 'name' => (string)$audit['name'], 'reason' => $reason,
     'roads' => $impact['roads'], 'segments' => $impact['segments'], 'started' => $impact['started'], 'surveyors' => $impact['surveyors'],
 ]);
 
 // Tell the City Leader and every surveyor on it. A failure here must never undo the delete.
 try {
     $notes = new NotificationRepository($pdo);
-    $t = projectDeletedNotificationText((string)$audit['name']);
+    $t = projectDeletedNotificationText((string)$audit['name'], $reason);
     $targets = $surveyorIds;
     if ($leaderId !== null) {
         $targets[] = $leaderId;
