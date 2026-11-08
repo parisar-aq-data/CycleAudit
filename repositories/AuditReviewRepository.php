@@ -176,7 +176,18 @@ class AuditReviewRepository
         $a = $this->submittedAssignment($audit, $segmentId);
 
         $surveyorId = (int)$a['surveyor_id'];
+        if ($newSurveyorId === null || $newSurveyorId === $surveyorId) {
+            $own = $this->pdo->prepare('SELECT is_active FROM users WHERE id = ?');
+            $own->execute([$surveyorId]);
+            if ((int)$own->fetchColumn() !== 1) {
+                throw new DomainException('That surveyor has left the team. Choose another active surveyor to re-audit this segment.');
+            }
+        }
         if ($newSurveyorId !== null && $newSurveyorId !== $surveyorId) {
+            require_once __DIR__ . '/SurveyorRemovalRepository.php';
+            if ((new SurveyorRemovalRepository($this->pdo))->isPending($newSurveyorId)) {
+                throw new DomainException('That surveyor is being removed. Choose another surveyor.');
+            }
             $u = $this->pdo->prepare(
                 "SELECT COUNT(*) FROM users WHERE id = ? AND role = 'surveyor' AND is_active = 1 AND city_id = ?"
             );

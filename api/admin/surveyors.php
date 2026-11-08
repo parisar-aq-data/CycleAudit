@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../helpers/Cities.php';
 require_once __DIR__ . '/../../helpers/CityLeaderAssign.php';
 require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../helpers/RoleRules.php';
+require_once __DIR__ . '/../../helpers/WorkNotify.php';
 
 $isNationalAdmin = $CURRENT_USER_ROLE === 'admin';
 
@@ -61,6 +62,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $s['is_current_user']  = $s['id'] === $CURRENT_USER_ID;
         $s['has_profile_picture'] = $s['profile_picture'] !== null && $s['profile_picture'] !== '';
         unset($s['profile_picture']);
+    }
+    unset($s);
+    // Who is waiting to be removed (needs migration 031; without it nobody is).
+    $waiting = [];
+    try {
+        $waiting = array_flip(array_map('intval', $pdo->query('SELECT id FROM users WHERE removal_pending_at IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN)));
+    } catch (Throwable $e) {
+        $waiting = [];
+    }
+    foreach ($surveyors as &$s) {
+        $s['removal_pending'] = isset($waiting[$s['id']]);
     }
     unset($s);
     echo json_encode([
@@ -162,7 +174,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $oldCityId = $target['city_id'] !== null ? (int)$target['city_id'] : null;
         if ($oldCityId !== $newCityId) {
+            // A surveyor leaving a city: what they have not started goes back to unassigned; if
+            // they have started segments they must finish them first, so the move is refused for now.
+            $movedPlan = ['release' => [], 'keep' => []];
+            if ((string)$target['role'] === 'surveyor') {
+                $remover   = new SurveyorRemovalRepository($pdo);
+                $movedPlan = $remover->plan($targetId);
+                if ($movedPlan['keep']) {
+                    http_response_code(409);
+                    echo json_encode(['success' => false, 'error' => 'This surveyor has ' . count($movedPlan['keep'])
+                        . ' segment(s) in progress in their current city. Move them after they have submitted.']);
+                    exit;
+                }
+                $remover->releaseUnstarted($movedPlan);
+                $remover->cancel($targetId);
+            }
             $pdo->prepare('UPDATE users SET city_id = ? WHERE id = ?')->execute([$newCityId, $targetId]);
+            if ((string)$target['role'] === 'surveyor') {
+                $pdo->prepare('UPDATE users SET team_leader_id = NULL WHERE id = ?')->execute([$targetId]);
+                $cn = $pdo->prepare('SELECT name FROM cities WHERE id = ?');
+                $cn->execute([$newCityId]);
+                $un = $pdo->prepare('SELECT name FROM users WHERE id = ?');
+                $un->execute([$targetId]);
+                workNotifyRemoval($pdo, ['id' => $targetId, 'name' => (string)($un->fetchColumn() ?: 'The surveyor')],
+                    $movedPlan, 'now', REMOVAL_ACTION_TEAM, (string)($cn->fetchColumn() ?: 'another city'));
+            }
             ActivityLogger::log($pdo, ActivityLogger::USER_CITY_CHANGED, $CURRENT_USER_ID, [
                 'user_id'      => $targetId,
                 'from_city_id' => $oldCityId,
@@ -286,10 +322,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $update = $pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
-        $update->execute([$active ? 1 : 0, $targetId]);
+        // Reactivating (or cancelling a waiting removal) forgets any removal that was waiting.
+        if ($active) {
+            $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = ?")->execute([$targetId]);
+            (new SurveyorRemovalRepository($pdo))->cancel($targetId);
+            echo json_encode(['success' => true, 'mode' => 'active']);
+            exit;
+        }
 
-        echo json_encode(['success' => true]);
+        // Deactivating a surveyor who still has assigned segments: what they have not started
+        // goes back to unassigned now; what they have started they finish first, then they are
+        // deactivated automatically (helpers/SurveyorRemoval.php).
+        if ((string)$target['role'] === 'surveyor' && (int)$target['is_active'] === 1) {
+            $remover = new SurveyorRemovalRepository($pdo);
+            $nm = $pdo->prepare('SELECT id, name FROM users WHERE id = ?');
+            $nm->execute([$targetId]);
+            $who = $nm->fetch(PDO::FETCH_ASSOC) ?: ['id' => $targetId, 'name' => 'The surveyor'];
+            if ($remover->isPending($targetId)) {
+                echo json_encode(['success' => true, 'mode' => 'wait', 'pending' => true,
+                    'message' => $who['name'] . ' is already waiting to be deactivated. It happens when they submit the segments in progress.']);
+                exit;
+            }
+            $plan = $remover->plan($targetId);
+            $mode = surveyorRemovalOutcome($plan);
+            try {
+                $pdo->beginTransaction();
+                if ($mode === 'wait') {
+                    $remover->schedule($targetId, REMOVAL_ACTION_DEACTIVATE, (int)$CURRENT_USER_ID);
+                }
+                $released = $remover->releaseUnstarted($plan);
+                if ($mode === 'now') {
+                    $remover->finalise($targetId, REMOVAL_ACTION_DEACTIVATE, null);
+                }
+                $pdo->commit();
+            } catch (DomainException $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                http_response_code(503);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                throw $e;
+            }
+            workNotifyRemoval($pdo, $who, $plan, $mode, REMOVAL_ACTION_DEACTIVATE);
+            echo json_encode(['success' => true, 'mode' => $mode, 'released' => $released, 'in_progress' => count($plan['keep']),
+                'message' => surveyorRemovalMessage((string)$who['name'], REMOVAL_ACTION_DEACTIVATE, $mode, $released, count($plan['keep']))]);
+            exit;
+        }
+
+        $update = $pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
+        $update->execute([0, $targetId]);
+
+        echo json_encode(['success' => true, 'mode' => 'now']);
         exit;
     }
 

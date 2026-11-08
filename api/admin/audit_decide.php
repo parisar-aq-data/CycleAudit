@@ -26,6 +26,7 @@ require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../helpers/PublicAudits.php';
 require_once __DIR__ . '/../../repositories/CityAuditRepository.php';
 require_once __DIR__ . '/../../repositories/AuditReviewRepository.php';
+require_once __DIR__ . '/../../helpers/WorkNotify.php';
 
 $body = nationalApiContext($CURRENT_USER_ROLE);
 
@@ -46,11 +47,13 @@ try {
     if ($action === 'approve') {
         $review->approveAudit($audit, (int)$CURRENT_USER_ID);
         ActivityLogger::log($pdo, ActivityLogger::AUDIT_APPROVED, $CURRENT_USER_ID, ['audit_id' => (int)$audit['id']]);
+        workNotifyAdminDecision($pdo, $audit, 'approve', '');
         publicAuditsCacheClear();
         echo json_encode(['success' => true, 'status' => 'published']);
     } else {
         $review->returnAudit($audit, (int)$CURRENT_USER_ID, (string)($body['note'] ?? ''));
         ActivityLogger::log($pdo, ActivityLogger::AUDIT_RETURNED, $CURRENT_USER_ID, ['audit_id' => (int)$audit['id']]);
+        workNotifyAdminDecision($pdo, $audit, 'return', (string)($body['note'] ?? ''));
         echo json_encode(['success' => true, 'status' => 'in_review']);
     }
 } catch (DomainException $e) {

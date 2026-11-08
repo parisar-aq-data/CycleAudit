@@ -23,6 +23,7 @@ require_once __DIR__ . '/../../helpers/CityApi.php';
 require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../repositories/CityAuditRepository.php';
 require_once __DIR__ . '/../../repositories/AuditReviewRepository.php';
+require_once __DIR__ . '/../../helpers/WorkNotify.php';
 
 $body = cityApiContext($CURRENT_USER_ROLE, $CURRENT_USER_CITY_ID);
 $repo = new CityAuditRepository($pdo);
@@ -44,10 +45,12 @@ try {
     if ($action === 'close') {
         $review->close($audit);
         ActivityLogger::log($pdo, ActivityLogger::AUDIT_CLOSED, $CURRENT_USER_ID, ['audit_id' => (int)$audit['id']]);
+        workNotifyClosed($pdo, $audit);
         echo json_encode(['success' => true, 'status' => 'finalised']);
     } else {
         $review->sendToAdmin($audit);
         ActivityLogger::log($pdo, ActivityLogger::AUDIT_SENT_TO_ADMIN, $CURRENT_USER_ID, ['audit_id' => (int)$audit['id']]);
+        workNotifySentToAdmin($pdo, $audit);
         echo json_encode(['success' => true, 'status' => 'awaiting_approval']);
     }
 } catch (DomainException $e) {

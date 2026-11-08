@@ -220,7 +220,7 @@ document.addEventListener('click', e => {
     }
     // City Leaders may only (de)activate surveyors; the API enforces this.
     var toggleBtn = (IS_NATIONAL_ADMIN || s.role === 'surveyor')
-      ? '<button class="toggle-status-btn" data-id="' + s.id + '" data-active="' + s.is_active + '">' + (s.is_active ? 'Deactivate' : 'Reactivate') + '</button>'
+      ? '<button class="toggle-status-btn" data-id="' + s.id + '" data-active="' + (s.removal_pending ? 'false' : s.is_active) + '" data-pending="' + (s.removal_pending ? '1' : '') + '">' + (s.removal_pending ? 'Cancel removal' : (s.is_active ? 'Deactivate' : 'Reactivate')) + '</button>'
       : '';
     // Reset password: Admin on anyone but themselves, City Leader on surveyors.
     // The API enforces this too, and refuses deactivated accounts (reactivate first).
@@ -240,7 +240,7 @@ document.addEventListener('click', e => {
       '<td class="surv-stat">' + s.segments_audited + '</td>' +
       '<td>' + fmtDate(s.last_audit_at || s.last_login) + '</td>' +
       '<td>' + fmtDate(s.created_at) + '</td>' +
-      '<td>' + (s.is_active ? '<span style="color:#16a34a;font-weight:600;">Active</span>' : '<span style="color:#9ca3af;font-weight:600;">Inactive</span>') + '</td>' +
+      '<td>' + (s.removal_pending ? '<span style="color:#b45309;font-weight:600;" title="Finishing started segments, then deactivated or removed from the team">Leaving</span>' : (s.is_active ? '<span style="color:#16a34a;font-weight:600;">Active</span>' : '<span style="color:#9ca3af;font-weight:600;">Inactive</span>')) + '</td>' +
       '<td style="white-space:nowrap;">' + toggleBtn + resetBtn + roleBtn + '</td>';
     return tr;
   }
@@ -358,7 +358,9 @@ document.addEventListener('click', e => {
     if (e.target.classList.contains('toggle-status-btn')) {
       var id = parseInt(e.target.dataset.id, 10);
       var newActive = e.target.dataset.active !== 'true';
-      if (!confirm(newActive ? 'Reactivate this user?' : 'Deactivate this user? They will no longer be able to log in.')) return;
+      var wasPending = e.target.dataset.pending === '1';
+      if (!confirm(wasPending ? 'Cancel the removal? They stay active.'
+          : (newActive ? 'Reactivate this user?' : 'Deactivate this user? Segments they have not started go back to unassigned. If they have segments in progress they finish those first, then are deactivated.'))) return;
       fetch('../api/admin/surveyors.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
@@ -368,7 +370,11 @@ document.addEventListener('click', e => {
       .then(function (data) {
         if (!data.success) { alert(data.error || 'Update failed.'); return; }
         var s = allSurveyors.find(function (x) { return x.id === id; });
-        if (s) s.is_active = newActive;
+        if (s) {
+          if (data.mode === 'wait') { s.removal_pending = true; }
+          else { s.removal_pending = false; s.is_active = newActive; }
+        }
+        if (data.message) alert(data.message);
         applyFilter();
       })
       .catch(function () { alert('Network error.'); });
