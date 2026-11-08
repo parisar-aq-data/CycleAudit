@@ -93,12 +93,40 @@ function assignmentNotifyPlan(array $before, array $segmentIds, ?int $newSurveyo
     return ['gained' => $gained, 'lost' => $lost];
 }
 
-/** What people on a project are told when the Admin deletes it. */
-function projectDeletedNotificationText(string $auditName): array
+const PROJECT_DELETE_REASON_MIN = 5;
+const PROJECT_DELETE_REASON_MAX = 200;
+
+/** The reason as typed, with control characters removed and spaces tidied. */
+function projectDeleteReasonClean(mixed $raw): string
 {
+    $s = is_string($raw) ? $raw : '';
+    $s = (string)preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $s);
+    return trim((string)preg_replace('/\s+/u', ' ', $s));
+}
+
+/** Why the Admin's reason for deleting a project cannot be used (null = fine). */
+function projectDeleteReasonError(string $cleanReason): ?string
+{
+    $n = mb_strlen($cleanReason);
+    if ($n < PROJECT_DELETE_REASON_MIN) {
+        return 'Write the reason for deleting this project (at least ' . PROJECT_DELETE_REASON_MIN . ' characters). The City Leader and surveyors will read it.';
+    }
+    if ($n > PROJECT_DELETE_REASON_MAX) {
+        return 'The reason can be at most ' . PROJECT_DELETE_REASON_MAX . ' characters.';
+    }
+    return null;
+}
+
+/** What people on a project are told when the Admin deletes it, with the Admin's reason. */
+function projectDeletedNotificationText(string $auditName, string $reason = ''): array
+{
+    $body = 'The Admin deleted the project "' . $auditName . '". Work on it has stopped and it no longer appears on your dashboard.';
+    if ($reason !== '') {
+        $body .= ' Reason: ' . $reason;
+    }
     return [
         'title' => 'Project deleted',
-        'body'  => 'The Admin deleted the project "' . $auditName . '". Work on it has stopped and it no longer appears on your dashboard.',
+        'body'  => mb_substr($body, 0, 500),   // notifications.body is VARCHAR(500)
     ];
 }
 

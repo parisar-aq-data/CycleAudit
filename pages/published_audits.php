@@ -263,6 +263,11 @@ $today = (new DateTime('now', new DateTimeZone('Asia/Kolkata')))->format('Y-m-d'
       <input id="pubConfName" type="text" autocomplete="off">
       <div class="ca-err"></div>
     </div>
+    <div class="ca-field" id="pubConfReasonWrap" hidden>
+      <label for="pubConfReason">Why are you deleting it? The City Leader and surveyors will see this.</label>
+      <textarea id="pubConfReason" rows="3" maxlength="200" placeholder="For example: duplicate of another project"></textarea>
+      <div class="ca-err"></div>
+    </div>
     <div class="ca-modal-actions">
       <button type="button" class="ca-btn ghost" id="pubConfCancel">Cancel</button>
       <button type="button" class="ca-btn" id="pubConfGo">Confirm</button>
