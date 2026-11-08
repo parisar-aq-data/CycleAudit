@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cycleaudit.parisar-pune.workers.dev/"><b>Live app</b></a>
+  <a href="https://cycleaudit.parisar.org/"><b>Live app</b></a>
 </p>
 
 <p align="center">
@@ -126,7 +126,7 @@ Road scores are **length-weighted** across their segments and are computed with 
 | Testing | PHPUnit 10 |
 | CI | GitHub Actions (PHP lint + PHPUnit on PHP 8.3) |
 | Container | Docker (Ubuntu 22.04, Apache 2, PHP 8.1) |
-| Hosting | Railway, with Cloudflare in front |
+| Hosting | Railway |
 | Backups | `mysqldump`, `rclone`, Backblaze B2 |
 
 ## Project structure
@@ -241,13 +241,13 @@ There are 139 test methods across 7 suites, covering the scoring engine and its 
 
 ## Deployment
 
-CycleAudit is containerised and runs on **Railway**, with a managed MySQL service and Cloudflare in front.
+CycleAudit is containerised and runs on **Railway**, with a managed MySQL service.
 
 - `Dockerfile` builds an Ubuntu 22.04 image with Apache, PHP 8.1, Composer dependencies and `rclone`. It sets hardened PHP options (errors logged not displayed, `expose_php` off, secure session cookie flags).
 - `docker-entrypoint.sh` reads Railway's `PORT` and points Apache at it.
 - `railway.toml` selects the Dockerfile builder and restarts on failure (up to 3 times).
 - `health.php` returns `200` when the database responds and `503` when it does not.
-- Sessions are HTTPS-aware behind the proxy (`X-Forwarded-Proto`), and rate limiting reads the real visitor IP from Cloudflare's `CF-Connecting-IP` header, but only when the request really comes from a Cloudflare range.
+- Sessions are HTTPS-aware behind the proxy (`X-Forwarded-Proto`), and rate limiting reads the real visitor IP from `X-Forwarded-For`, but only when the request really comes from Railway's proxy range.
 
 **To deploy your own copy:**
 
@@ -278,7 +278,7 @@ Found a vulnerability? Please open a private security advisory on GitHub rather 
 - [ ] Profile pictures are stored as base64 in MySQL because Railway's filesystem is ephemeral. Object storage would be better.
 
 **Roadmap**
-- [ ] Image upload for audits (Cloudflare R2)
+- [ ] Image upload for audits
 - [ ] Analytics dashboard
 - [ ] Screenshots and a demo walkthrough in this README
 
