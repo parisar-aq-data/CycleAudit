@@ -476,3 +476,153 @@ function activityBuildEntries(array $rows, array $names): array
     }
     return $out;
 }
+
+// ── filters ─────────────────────────────────────────────────────
+
+/** Actions in a group, or just the one action asked for. Empty list = no such group or action. @return list<string> */
+function activityActionsFor(string $category, string $action): array
+{
+    $map = activityActionMap();
+    if ($action !== '') {
+        return isset($map[$action]) ? [$action] : [];
+    }
+    $out = [];
+    foreach ($map as $code => [, $cat]) {
+        if ($cat === $category) {
+            $out[] = $code;
+        }
+    }
+    return $out;
+}
+
+/** Actions shown in red (deletions, removals, failures): the "Deletions and failures" quick view. @return list<string> */
+function activityBadActions(): array
+{
+    $out = [];
+    foreach (array_keys(activityActionMap()) as $code) {
+        if (activityActionInfo($code)['tone'] === 'bad') {
+            $out[] = $code;
+        }
+    }
+    return $out;
+}
+
+/**
+ * "2026-11-08" (a day in India) to the UTC window the database stores, end exclusive.
+ * A bad or missing date leaves that end open. @return array{0:?string, 1:?string}
+ */
+function activityDateRangeUtc(?string $from, ?string $to): array
+{
+    $ist = new DateTimeZone('Asia/Kolkata');
+    $utc = new DateTimeZone('UTC');
+    $edge = static function (?string $day, int $plusDays) use ($ist, $utc): ?string {
+        if ($day === null || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            return null;
+        }
+        try {
+            $d = new DateTime($day . ' 00:00:00', $ist);
+        } catch (Exception $e) {
+            return null;
+        }
+        if ($d->format('Y-m-d') !== $day) {
+            return null;   // 2026-02-31 and the like
+        }
+        if ($plusDays > 0) {
+            $d->modify('+' . $plusDays . ' day');
+        }
+        return $d->setTimezone($utc)->format('Y-m-d H:i:s');
+    };
+    return [$edge($from, 0), $edge($to, 1)];
+}
+
+/**
+ * What the page asked for, cleaned up. Unknown values are dropped rather than trusted.
+ *
+ * @param  array<string,mixed> $get
+ * @return array{category:string, action:string, user:?string, role:string, audit:int, from:?string, to:?string, q:string, tone:string, order:string}
+ */
+function activityFilterFromRequest(array $get): array
+{
+    $str = static fn(string $k): string => is_string($get[$k] ?? null) ? trim((string)$get[$k]) : '';
+    $map = activityActionMap();
+    $category = $str('category');
+    if (!isset(activityCategories()[$category])) {
+        $category = '';
+    }
+    $action = $str('action');
+    if (!isset($map[$action])) {
+        $action = '';
+    }
+    $user = $str('user');
+    $user = ($user === 'none' || ctype_digit($user)) && $user !== '' ? $user : null;
+    $role = $str('role');
+    if (!in_array($role, ['admin', 'city_leader', 'surveyor'], true)) {
+        $role = '';
+    }
+    $day = static fn(string $v): ?string => preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
+    $from = $day($str('from'));
+    $to   = $day($str('to'));
+    if ($from !== null && $to !== null && $from > $to) {
+        [$from, $to] = [$to, $from];
+    }
+    return [
+        'category' => $category,
+        'action'   => $action,
+        'user'     => $user,
+        'role'     => $role,
+        'audit'    => ctype_digit($str('audit')) ? (int)$str('audit') : 0,
+        'from'     => $from,
+        'to'       => $to,
+        'q'        => mb_substr($str('q'), 0, 100),
+        'tone'     => $str('tone') === 'bad' ? 'bad' : '',
+        'order'    => $str('order') === 'asc' ? 'asc' : 'desc',
+    ];
+}
+
+/** Every word typed must appear somewhere in the person, action, details or address. */
+function activityEntryMatches(array $entry, string $q): bool
+{
+    $q = mb_strtolower(trim($q));
+    if ($q === '') {
+        return true;
+    }
+    $hay = mb_strtolower(implode(' ', [$entry['actor_name'], $entry['actor_role'], $entry['label'], $entry['details'], $entry['ip']]));
+    foreach (preg_split('/\s+/', $q) ?: [] as $word) {
+        if ($word !== '' && !str_contains($hay, $word)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Choices for the filter boxes: people who appear in the log, and every project.
+ *
+ * @return array{people:list<array{id:int,name:string,role:string}>, projects:list<array{id:int,name:string}>}
+ */
+function activityFilterOptions(PDO $pdo): array
+{
+    $people = [];
+    $projects = [];
+    try {
+        $st = $pdo->query(
+            'SELECT u.id, u.name, u.role FROM users u
+              WHERE u.id IN (SELECT DISTINCT user_id FROM activity_log WHERE user_id IS NOT NULL)
+                 OR u.id IN (SELECT DISTINCT actor_id FROM audit_log WHERE actor_id IS NOT NULL)
+              ORDER BY u.name ASC'
+        );
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $people[] = ['id' => (int)$r['id'], 'name' => (string)$r['name'], 'role' => activityRoleLabel((string)$r['role'])];
+        }
+    } catch (Throwable $e) {
+        error_log('activityFilterOptions(people) failed: ' . $e->getMessage());
+    }
+    try {
+        foreach ($pdo->query('SELECT id, name FROM city_audits ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $projects[] = ['id' => (int)$r['id'], 'name' => (string)$r['name']];
+        }
+    } catch (Throwable $e) {
+        error_log('activityFilterOptions(projects) failed: ' . $e->getMessage());
+    }
+    return ['people' => $people, 'projects' => $projects];
+}

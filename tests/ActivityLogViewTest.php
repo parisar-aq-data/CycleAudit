@@ -146,4 +146,86 @@ class ActivityLogViewTest extends TestCase
         $this->assertSame('account', $e[0]['category']);
         $this->assertSame('8 Nov 2026, 5:30 PM', $e[0]['when']);   // 12:00 UTC is 17:30 in India
     }
+
+    // ── filters ─────────────────────────────────────────────────
+
+    public function test_filter_request_keeps_good_values_and_drops_bad_ones(): void
+    {
+        $f = activityFilterFromRequest([
+            'category' => 'passwords', 'action' => 'not_an_action', 'user' => '7', 'role' => 'surveyor',
+            'audit' => '5', 'from' => '2026-11-08', 'to' => '2026-11-01', 'q' => '  Pune  ', 'tone' => 'bad', 'order' => 'asc',
+        ]);
+        $this->assertSame('passwords', $f['category']);
+        $this->assertSame('', $f['action']);            // unknown action is dropped
+        $this->assertSame('7', $f['user']);
+        $this->assertSame('surveyor', $f['role']);
+        $this->assertSame(5, $f['audit']);
+        $this->assertSame(['2026-11-01', '2026-11-08'], [$f['from'], $f['to']]);   // swapped into order
+        $this->assertSame('Pune', $f['q']);
+        $this->assertSame('bad', $f['tone']);
+        $this->assertSame('asc', $f['order']);
+
+        $junk = activityFilterFromRequest(['category' => 'x', 'user' => "1; DROP TABLE users", 'role' => 'root', 'audit' => '-3', 'from' => 'yesterday', 'order' => 'sideways', 'q' => ['a']]);
+        $this->assertSame('', $junk['category']);
+        $this->assertNull($junk['user']);
+        $this->assertSame('', $junk['role']);
+        $this->assertSame(0, $junk['audit']);
+        $this->assertNull($junk['from']);
+        $this->assertSame('desc', $junk['order']);
+        $this->assertSame('', $junk['q']);
+
+        $this->assertSame('none', activityFilterFromRequest(['user' => 'none'])['user']);
+    }
+
+    public function test_a_day_in_india_becomes_the_matching_utc_window(): void
+    {
+        // India is 5h30 ahead of UTC: 8 Nov in India starts at 18:30 UTC on 7 Nov.
+        $this->assertSame(['2026-11-07 18:30:00', '2026-11-08 18:30:00'], activityDateRangeUtc('2026-11-08', '2026-11-08'));
+        $this->assertSame(['2026-11-07 18:30:00', null], activityDateRangeUtc('2026-11-08', null));
+        $this->assertSame([null, '2026-11-02 18:30:00'], activityDateRangeUtc(null, '2026-11-02'));
+        $this->assertSame([null, null], activityDateRangeUtc('2026-02-31', 'junk'));
+    }
+
+    public function test_group_and_quick_view_action_lists(): void
+    {
+        $passwords = activityActionsFor('passwords', '');
+        $this->assertContains('password_changed', $passwords);
+        $this->assertNotContains('user_login', $passwords);
+        $this->assertSame(['user_login'], activityActionsFor('', 'user_login'));
+        $this->assertSame([], activityActionsFor('', 'nope'));
+
+        $bad = activityBadActions();
+        foreach (['audit_deleted', 'user_login_failed', 'user_deactivated', 'road_deleted'] as $a) {
+            $this->assertContains($a, $bad);
+        }
+        $this->assertNotContains('user_login', $bad);
+        $this->assertNotContains('audit_created', $bad);
+    }
+
+    public function test_search_needs_every_word_somewhere_in_the_row(): void
+    {
+        $e = ['actor_name' => 'Bengaluru_Leader', 'actor_role' => 'City Leader', 'label' => 'Project deleted', 'details' => 'Deleted project “002”. Reason: need to end this project', 'ip' => '152.56.7.28'];
+        $this->assertTrue(activityEntryMatches($e, ''));
+        $this->assertTrue(activityEntryMatches($e, 'bengaluru deleted'));
+        $this->assertTrue(activityEntryMatches($e, 'REASON need'));
+        $this->assertTrue(activityEntryMatches($e, '152.56'));
+        $this->assertFalse(activityEntryMatches($e, 'bengaluru surveyor'));
+    }
+
+    public function test_filter_choices_list_people_in_the_log_and_every_project(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, role TEXT)');
+        $pdo->exec('CREATE TABLE activity_log (id INTEGER PRIMARY KEY, user_id INTEGER)');
+        $pdo->exec('CREATE TABLE audit_log (id INTEGER PRIMARY KEY, actor_id INTEGER)');
+        $pdo->exec('CREATE TABLE city_audits (id INTEGER PRIMARY KEY, name TEXT)');
+        $pdo->exec("INSERT INTO users VALUES (1,'Zed','admin'),(2,'Asha','city_leader'),(3,'Quiet','surveyor')");
+        $pdo->exec('INSERT INTO activity_log (user_id) VALUES (1),(1),(NULL)');
+        $pdo->exec('INSERT INTO audit_log (actor_id) VALUES (2)');
+        $pdo->exec("INSERT INTO city_audits VALUES (5,'final test'),(18,'002 [deleted #18]')");
+        $o = activityFilterOptions($pdo);
+        $this->assertSame([['id' => 2, 'name' => 'Asha', 'role' => 'City Leader'], ['id' => 1, 'name' => 'Zed', 'role' => 'Admin']], $o['people']);   // by name; Quiet never acted
+        $this->assertSame([18, 5], array_column($o['projects'], 'id'));
+    }
 }
