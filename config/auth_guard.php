@@ -31,7 +31,11 @@ header(
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
     "font-src 'self' https://fonts.gstatic.com; " .
     "img-src 'self' data:; " .
-    "connect-src 'self';"
+    "connect-src 'self'; " .
+    "object-src 'none'; " .
+    "base-uri 'self'; " .
+    "form-action 'self'; " .
+    "frame-ancestors 'self';"
 );
 
 if (!isset($_SESSION['user_id'])) {

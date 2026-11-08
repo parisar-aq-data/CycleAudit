@@ -93,8 +93,10 @@ try {
     $saved = 0;
     foreach ($segments as $seg) {
         $segNum = isset($seg['segment_number']) ? (int)$seg['segment_number']   : 0;
-        $startL = trim((string)($seg['start_label']    ?? ''));
-        $endL   = trim((string)($seg['end_label']      ?? ''));
+        // Labels are free text shown to other users: drop control characters and
+        // keep within the column size (VARCHAR 200). The pages also escape them.
+        $startL = mb_substr(trim((string)preg_replace('/[\x00-\x1F\x7F]/u', '', (string)($seg['start_label'] ?? ''))), 0, 200);
+        $endL   = mb_substr(trim((string)preg_replace('/[\x00-\x1F\x7F]/u', '', (string)($seg['end_label']   ?? ''))), 0, 200);
         $startD = isset($seg['start_distance']) ? (float)$seg['start_distance'] : 0.0;
         $endD   = isset($seg['end_distance'])   ? (float)$seg['end_distance']   : 0.0;
         $length = isset($seg['length'])         ? (float)$seg['length']         : 0.0;
