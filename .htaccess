@@ -9,9 +9,10 @@ RewriteCond %{REQUEST_URI} !^/health\.php$
 RewriteCond %{HTTP:X-Forwarded-Proto} =http
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Protect config directory from direct access
-RewriteRule ^config/ - [F,L]
-RewriteRule ^debug/ - [F,L]
+# Server-side code and project files are never served to browsers.
+# (The Docker image copies the whole project into the web folder.)
+RewriteRule ^(config|debug|migrations|scripts|tests|helpers|repositories|services|vendor|reports|\.git|\.github)(/|$) - [F,L]
+RewriteRule ^(composer\.(json|lock)|Dockerfile|docker-entrypoint\.sh|phpunit\.xml|railway\.toml|env\.example|BACKUPS\.md|README\.md|\.gitignore|\.gitattributes|\.dockerignore)$ - [F,L]
 
 # Allow direct access to existing files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -45,3 +46,8 @@ RewriteRule ^ index.html [L]
     </FilesMatch>
 </IfModule>
 
+
+# Belt and braces: never serve these file types, wherever they are.
+<FilesMatch "\.(sql|sh|lock|toml|log|bak|env)$">
+    Require all denied
+</FilesMatch>

@@ -41,7 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($user && password_verify($password, (string)$user['password'])) {
+            // Check a password hash even when the email is unknown, so a reply
+            // takes the same time whether or not the account exists.
+            $hashToCheck = $user ? (string)$user['password'] : '$2y$10$wHAeNL374pUQ6RTlNo/gg.8xwy.lq4.rb/tKQb/30FHv2Iqjmm/3K';
+            $passwordOk  = password_verify($password, $hashToCheck);
+
+            if ($user && $passwordOk) {
                 if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
                     $error = 'This account has been deactivated. Please contact an administrator.';
                 } else {

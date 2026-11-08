@@ -9,6 +9,12 @@
 // ═══════════════════════════════════════════════════════════════════
 
 // ── State ────────────────────────────────────────────────────────
+// Escape text before it goes into innerHTML. Road names and segment labels are
+// typed by users, so markup in them must show as text, never run.
+function segEsc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
 let roadData        = {};
 let segments        = [];
 let _currentRoadId  = null;
@@ -412,7 +418,7 @@ function displaySegments() {
     card.innerHTML = `
       <div class="seg-num ${isDone ? 'done' : ''}">${isDone ? '✓' : seg.number}</div>
       <div class="seg-list-info">
-        <div class="seg-list-name">Segment ${seg.number}: ${seg.startLandmark} → ${seg.endLandmark}</div>
+        <div class="seg-list-name">Segment ${seg.number}: ${segEsc(seg.startLandmark)} → ${segEsc(seg.endLandmark)}</div>
         <div class="seg-list-meta">${seg.startDistance}m – ${seg.endDistance}m &nbsp;|&nbsp; ${seg.length.toFixed(0)}m</div>
       </div>
       ${statusHtml}
@@ -500,13 +506,13 @@ function editRoadInfo() {
   let bodyMsg, warnMsg;
 
   if (done === 0) {
-    bodyMsg = `You're about to edit <strong>${roadData.name}</strong>. No audits started yet.`;
+    bodyMsg = `You're about to edit <strong>${segEsc(roadData.name)}</strong>. No audits started yet.`;
     warnMsg = `⚠ Regenerating segments will reset the current segment list.`;
   } else if (done < total) {
-    bodyMsg = `<strong>${done}/${total} segments</strong> of <strong>${roadData.name}</strong> have been audited.`;
+    bodyMsg = `<strong>${done}/${total} segments</strong> of <strong>${segEsc(roadData.name)}</strong> have been audited.`;
     warnMsg = `⚠ Editing the road will delete all existing audit progress.`;
   } else {
-    bodyMsg = `All <strong>${total} segments</strong> of <strong>${roadData.name}</strong> are fully audited.`;
+    bodyMsg = `All <strong>${total} segments</strong> of <strong>${segEsc(roadData.name)}</strong> are fully audited.`;
     warnMsg = `⚠ Editing a fully audited road requires re-auditing all segments.`;
   }
 
