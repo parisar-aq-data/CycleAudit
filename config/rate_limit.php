@@ -237,38 +237,13 @@ function _pruneOldAttempts(PDO $pdo): void
  *
  * Railway proxy ranges: 100.64.0.0/10 (CGNAT) + RFC-1918 private ranges.
  * On local XAMPP, REMOTE_ADDR is 127.0.0.1 — also trusted for dev.
- *
- * Cloudflare note: the site is served through Cloudflare in front of
- * Railway. REMOTE_ADDR at the app layer is a Cloudflare edge IP, which
- * varies request-to-request even for the same visitor — it must never be
- * used directly for rate limiting. When the connection comes from a known
- * Cloudflare range, we prefer the CF-Connecting-IP header, which Cloudflare
- * sets to the real visitor IP and which the visitor cannot spoof (Cloudflare
- * overwrites any client-supplied value for this header at its edge).
  */
 function getClientIp(): string
 {
     $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
-    // Trusted proxy subnets: Cloudflare edge ranges + Railway CGNAT +
-    // private ranges + localhost
+    // Trusted proxy subnets: Railway CGNAT + private ranges + localhost
     $trustedProxyCidrs = [
-        // Cloudflare IPv4 ranges (see https://www.cloudflare.com/ips-v4/)
-        '173.245.48.0/20',
-        '103.21.244.0/22',
-        '103.22.200.0/22',
-        '103.31.4.0/22',
-        '141.101.64.0/18',
-        '108.162.192.0/18',
-        '190.93.240.0/20',
-        '188.114.96.0/20',
-        '197.234.240.0/22',
-        '198.41.128.0/17',
-        '162.158.0.0/15',
-        '104.16.0.0/13',
-        '104.24.0.0/14',
-        '172.64.0.0/13',
-        '131.0.72.0/22',
         '100.64.0.0/10',  // Railway CGNAT range
         '10.0.0.0/8',     // RFC-1918
         '172.16.0.0/12',  // RFC-1918
@@ -293,17 +268,6 @@ function getClientIp(): string
     }
 
     if ($isTrustedProxy) {
-        // Prefer CF-Connecting-IP: Cloudflare sets this to the real visitor
-        // IP and strips/overwrites any value a client tries to send for it,
-        // so it can't be spoofed the way X-Forwarded-For sometimes can.
-        $cfIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
-        if ($cfIp !== '') {
-            $ip = filter_var($cfIp, FILTER_VALIDATE_IP);
-            if ($ip !== false) {
-                return $ip;
-            }
-        }
-
         $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
         if ($forwarded !== '') {
             // X-Forwarded-For is a comma-separated list — leftmost is the client
