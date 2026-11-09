@@ -167,13 +167,17 @@ function sendCspHeader(): void
     }
 
     // Fresh per-request nonce for inline <script> blocks (pages read it as $_SESSION['csp_nonce'])
+    $nonce = '';
     if (session_status() === PHP_SESSION_ACTIVE) {
-        $_SESSION['csp_nonce'] = base64_encode(random_bytes(16));
+        $nonce = base64_encode(random_bytes(16));
+        $_SESSION['csp_nonce'] = $nonce;
     }
+    // Scripts run only from this site or with this request's nonce ('unsafe-inline' is gone).
+    $scriptSrc = "'self'" . ($nonce !== '' ? " 'nonce-" . $nonce . "'" : '');
     header(
         "Content-Security-Policy: " .
         "default-src 'self'; " .
-        "script-src 'self' 'unsafe-inline'; " .
+        "script-src " . $scriptSrc . "; " .
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
         "font-src 'self' https://fonts.gstatic.com; " .
         "img-src 'self' data:; " .

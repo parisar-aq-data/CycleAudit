@@ -30,7 +30,7 @@ require_once __DIR__ . '/../services/ScoreService.php';
 
 $nonceRaw = base64_encode(random_bytes(16));
 header(
-    "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; " .
+    "Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-" . $nonceRaw . "'; " .
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; " .
     "img-src 'self' data:; connect-src 'self';"
 );
