@@ -22,9 +22,8 @@ startSecureSession();
 enforceSessionTimeout();
 
 // ── Content-Security-Policy ────────────────────────────────────
-$nonce = base64_encode(random_bytes(16));
-$_SESSION['csp_nonce'] = $nonce;
-sendCspHeader();
+sendCspHeader();                              // creates $_SESSION['csp_nonce'] and puts it in the header
+$nonce = $_SESSION['csp_nonce'] ?? '';        // same value the header carries
 
 if (!isset($_SESSION['user_id'])) {
     $wantsJson = (

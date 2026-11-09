@@ -148,3 +148,13 @@ def test_send_csp_header_creates_a_nonce():
     body = text[text.index("function sendCspHeader"):]
     body = body[:body.index("function ", 10)] if "function " in body[10:] else body
     assert "csp_nonce" in body, "sendCspHeader() must create $_SESSION['csp_nonce'] for pages that do not use auth_guard"
+
+
+def test_script_src_has_no_unsafe_inline():
+    """H6 final step: scripts need the nonce. Both places that send a policy must agree."""
+    for rel in ("config/constants.php", "pages/public_audit_report.php"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if "script-src" in line:
+                assert "unsafe-inline" not in line, f"{rel}: script-src allows 'unsafe-inline' again:\n{line.strip()}"
+        assert "'nonce-" in text, f"{rel}: script-src must carry the request's nonce"
