@@ -93,3 +93,40 @@ def test_form_handlers_load_before_form_js():
     text = (ROOT / FORM_PHP).read_text(encoding="utf-8")
     a, b = text.find("js/form-handlers.js"), text.find("js/form.js")
     assert a != -1 and b != -1 and a < b, "form-handlers.js must be loaded before form.js in form.php"
+
+# --- dashboard and report pages ---
+DASH_PHP, REPORT_PHP = "pages/dashboard.php", "pages/report.php"
+
+
+def _inline_hits(rel):
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    return [f"line {n}: {line.strip()[:90]}"
+            for n, line in enumerate(text.splitlines(), 1) if INLINE.search(line)]
+
+
+def test_dashboard_has_no_inline_handlers():
+    hits = _inline_hits(DASH_PHP)
+    assert not hits, f"{DASH_PHP} has inline event handlers again:\n" + "\n".join(hits)
+
+
+def test_report_has_no_inline_handlers():
+    hits = _inline_hits(REPORT_PHP)
+    assert not hits, f"{REPORT_PHP} has inline event handlers again:\n" + "\n".join(hits)
+
+
+def test_dashboard_inline_scripts_have_a_nonce():
+    text = (ROOT / DASH_PHP).read_text(encoding="utf-8")
+    bare = [m.group(0) for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>", text) if "nonce=" not in m.group(0)]
+    assert not bare, f"{DASH_PHP} has inline <script> blocks without a nonce: {bare}"
+
+
+def test_dashboard_and_report_labels_have_handlers():
+    for php, js, attr in ((DASH_PHP, "js/dashboard-handlers.js", "data-dash-action"),
+                          (REPORT_PHP, "js/report-handlers.js", "data-report-action")):
+        text = (ROOT / php).read_text(encoding="utf-8")
+        assert js in text, f"{php} does not load {js}"
+        labels = set(re.findall(attr + r'="([\w-]+)"', text))
+        code = (ROOT / js).read_text(encoding="utf-8")
+        assert labels, f"no {attr} labels found in {php}"
+        missing = sorted(n for n in labels if n not in code)
+        assert not missing, f"labels with no handler in {js}: {missing}"
