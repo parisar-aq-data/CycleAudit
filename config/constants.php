@@ -34,8 +34,29 @@ function _env(string $key, mixed $default = ''): mixed {
 define('DB_HOST', _env('MYSQLHOST',     _env('DB_HOST',     'localhost')));
 define('DB_PORT', (int)_env('MYSQLPORT', _env('DB_PORT',    3306)));
 define('DB_NAME', _env('MYSQLDATABASE', _env('DB_NAME',     'parisar_db')));
-define('DB_USER', _env('MYSQLUSER',     _env('DB_USER',     'root')));
-define('DB_PASS', _env('MYSQLPASSWORD', _env('DB_PASS',     '')));
+// No silent fallback to root on a real server (security review H5).
+require_once __DIR__ . '/../helpers/DbConfig.php';
+try {
+    [$_dbUser, $_dbPass] = resolveDbCredentials(
+        (string)DB_HOST,
+        (string)_env('MYSQLUSER',     _env('DB_USER', '')),
+        (string)_env('MYSQLPASSWORD', _env('DB_PASS', ''))
+    );
+} catch (RuntimeException $e) {
+    error_log('config/constants.php: ' . $e->getMessage());
+    if (PHP_SAPI === 'cli') {
+        throw $e;
+    }
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        http_response_code(503);
+    }
+    echo json_encode(['success' => false, 'error' => 'Database unavailable. Please try again later.']);
+    exit;
+}
+define('DB_USER', $_dbUser);
+define('DB_PASS', $_dbPass);
+unset($_dbUser, $_dbPass);
 
 // ── Application ───────────────────────────────────────────────
 define('BASE_URL',  _env('BASE_URL', 'http://localhost/Parisar'));
