@@ -1,0 +1,78 @@
+name: Security scan
+# Looks for known-vulnerable libraries and risky PHP code patterns.
+# REPORT-ONLY at first: findings are shown in the run summary but never block a pull request.
+# Runs on pull requests, on main, once a week (new library advisories appear over time) and on demand.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  libraries:
+    name: Known vulnerabilities in PHP libraries
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          coverage: none
+
+      - name: composer audit
+        continue-on-error: true
+        run: |
+          {
+            echo "## composer audit (production libraries)"
+            echo '```'
+            composer audit --no-dev --locked --format=plain 2>&1 || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  code:
+    name: Risky code patterns (Semgrep)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Semgrep
+        run: python -m pip install semgrep
+
+      - name: Scan the application code
+        continue-on-error: true
+        run: |
+          semgrep scan \
+            --config p/php --config p/security-audit --config p/owasp-top-ten \
+            --exclude vendor --exclude tests --exclude migrations --exclude node_modules \
+            --metrics=off --quiet --text --output semgrep.txt . || true
+          {
+            echo "## Semgrep findings"
+            echo '```'
+            if [ -s semgrep.txt ]; then head -c 60000 semgrep.txt; else echo "No findings."; fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the full report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep.txt
+          if-no-files-found: ignore
