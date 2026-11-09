@@ -95,9 +95,7 @@ def test_a_wrong_password_does_not_say_whether_the_email_exists():
     assert strip(known) == strip(unknown)
 
 
-@pytest.mark.xfail(strict=True, reason="Security review H6 still open: the sign-in pages send no Content-Security-Policy. "
-                                       "This starts passing when that is fixed - then delete this marker. "
-                                       "(Frame/nosniff/HSTS headers come from .htaccess and are checked by tests/smoke/smoke.py.)")
-def test_the_sign_in_page_sends_a_content_security_policy(anon):
-    r = anon.get("/auth/login.php")
+@pytest.mark.parametrize("path", ["/auth/login.php", "/auth/register.php", "/auth/forgot_password.php"])
+def test_the_sign_in_pages_send_a_content_security_policy(anon, path):
+    r = anon.get(path)
     assert "content-security-policy" in {h.lower() for h in r.headers}

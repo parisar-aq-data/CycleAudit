@@ -156,6 +156,31 @@ function startSecureSession(): void
 }
 
 /**
+ * Send the Content-Security-Policy header.
+ * Used by config/auth_guard.php (protected pages) and by the sign-in pages in
+ * auth/, so every HTML page gets the same policy. Call before any output.
+ */
+function sendCspHeader(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+    header(
+        "Content-Security-Policy: " .
+        "default-src 'self'; " .
+        "script-src 'self' 'unsafe-inline'; " .
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
+        "font-src 'self' https://fonts.gstatic.com; " .
+        "img-src 'self' data:; " .
+        "connect-src 'self'; " .
+        "object-src 'none'; " .
+        "base-uri 'self'; " .
+        "form-action 'self'; " .
+        "frame-ancestors 'self';"
+    );
+}
+
+/**
  * Call after startSecureSession() on every protected page/API.
  * Destroys the session and sends the user back to login if they
  * have been inactive longer than SESSION_LIFETIME seconds.

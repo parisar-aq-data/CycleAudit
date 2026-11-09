@@ -19,6 +19,7 @@ require_once __DIR__ . '/../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../config/rate_limit.php';
 
 startSecureSession();
+sendCspHeader();
 
 // Already logged in — go straight to dashboard
 if (isset($_SESSION['user_id'])) {

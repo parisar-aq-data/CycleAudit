@@ -24,19 +24,7 @@ enforceSessionTimeout();
 // ── Content-Security-Policy ────────────────────────────────────
 $nonce = base64_encode(random_bytes(16));
 $_SESSION['csp_nonce'] = $nonce;
-header(
-    "Content-Security-Policy: " .
-    "default-src 'self'; " .
-    "script-src 'self' 'unsafe-inline'; " .
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
-    "font-src 'self' https://fonts.gstatic.com; " .
-    "img-src 'self' data:; " .
-    "connect-src 'self'; " .
-    "object-src 'none'; " .
-    "base-uri 'self'; " .
-    "form-action 'self'; " .
-    "frame-ancestors 'self';"
-);
+sendCspHeader();
 
 if (!isset($_SESSION['user_id'])) {
     $wantsJson = (
