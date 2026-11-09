@@ -116,25 +116,16 @@ class ScoreHelpers
 
     /**
      * P9. Cyclist Slowed Down
-     * Two scoring groups based on road name
+     * One scale for every road: <5=0, 5-10=50, 10-20=75, >20=100
      */
-    public static function cyclistSlowed(float $count, string $roadName = ''): float
+    public static function cyclistSlowed(float $count): float
     {
-        // Group B road list is defined in config/constants.php — edit there,
-        // no code deployment needed to add/remove roads.
-        $road     = strtoupper(trim($roadName));
-        $isGroupB = in_array($road, GROUP_B_ROADS, true);
-
-        if ($count > 20) {
-            return 100.0;
-        }
-        if ($isGroupB) {
-            return 75.0;
-        }
-        // Group A: standard spec
-        if ($count < 5)   return 0.0;
-        if ($count <= 10) return 50.0;
-        return 75.0;
+        return match (true) {
+            $count < 5   => 0.0,
+            $count <= 10 => 50.0,
+            $count <= 20 => 75.0,
+            default      => 100.0,
+        };
     }
 
     /**

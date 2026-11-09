@@ -63,9 +63,9 @@ function penaltySurface(?string $material): float
     return ScoreHelpers::surface($material);
 }
 
-function penaltyCyclistSlowed(float $count, string $roadName = ''): float
+function penaltyCyclistSlowed(float $count): float
 {
-    return ScoreHelpers::cyclistSlowed($count, $roadName);
+    return ScoreHelpers::cyclistSlowed($count);
 }
 
 function penaltyShade(?string $shade): float
@@ -575,7 +575,7 @@ function calculateSegmentScoreDetailed(int $segmentAuditId, PDO $pdo): array
         ],
         'comfort' => [
             'surface'        => ScoreHelpers::surface($audit['surface_material'] ?? null),
-            'cyclist_slowed' => ScoreHelpers::cyclistSlowed((float)($obs['slowed'] ?? 0), $audit['road_name'] ?? ''),
+            'cyclist_slowed' => ScoreHelpers::cyclistSlowed((float)($obs['slowed'] ?? 0)),
             'shade'          => ScoreHelpers::shade($audit['shade'] ?? null),
         ],
     ];
@@ -736,10 +736,9 @@ function _computeScoreFromData(array $audit, array $obs, array $ints): array
     if ($allMissing) {
         $comfortRaw = 100.0;
     } else {
-        $roadName   = $audit['road_name'] ?? '';
         $comfortRaw = (
             ScoreHelpers::surface($audit['surface_material'] ?? null) +
-            ScoreHelpers::cyclistSlowed($cyclistSlowed, $roadName) +
+            ScoreHelpers::cyclistSlowed($cyclistSlowed) +
             ScoreHelpers::shade($audit['shade'] ?? null)
         ) / 3.0;
     }

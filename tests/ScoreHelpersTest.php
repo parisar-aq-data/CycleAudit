@@ -96,16 +96,10 @@ class ScoreHelpersTest extends TestCase
      */
     public function testCyclistSlowed()
     {
-        // Group A road
-        $this->assertEquals(0.0, ScoreHelpers::cyclistSlowed(3, 'F.C. Road'));
-        $this->assertEquals(50.0, ScoreHelpers::cyclistSlowed(7, 'F.C. Road'));
-        $this->assertEquals(75.0, ScoreHelpers::cyclistSlowed(15, 'F.C. Road'));
-        $this->assertEquals(100.0, ScoreHelpers::cyclistSlowed(25, 'F.C. Road'));
-
-        // Group B road
-        $this->assertEquals(75.0, ScoreHelpers::cyclistSlowed(3, 'DP ROAD'));
-        $this->assertEquals(75.0, ScoreHelpers::cyclistSlowed(15, 'DP ROAD'));
-        $this->assertEquals(100.0, ScoreHelpers::cyclistSlowed(25, 'DP ROAD'));
+        $this->assertEquals(0.0, ScoreHelpers::cyclistSlowed(3));
+        $this->assertEquals(50.0, ScoreHelpers::cyclistSlowed(7));
+        $this->assertEquals(75.0, ScoreHelpers::cyclistSlowed(15));
+        $this->assertEquals(100.0, ScoreHelpers::cyclistSlowed(25));
     }
 
     /**
