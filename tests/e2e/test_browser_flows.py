@@ -103,7 +103,7 @@ def test_password_change_in_one_browser_signs_out_the_other(browser):
         a.fill("#f-cur-pw", PASSWORD)
         a.fill("#f-new-pw", NEW_PASSWORD)
         a.fill("#f-confirm-pw", NEW_PASSWORD)
-        a.locator("button[onclick='changePassword()']").click()
+        a.locator("button[data-profile-action='change-password']").click()
         pw.expect(a.locator("#alert-account-msg")).to_contain_text("Password changed")
 
         # browser B: any protected page now sends it to the sign-in page
