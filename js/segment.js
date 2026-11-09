@@ -410,9 +410,9 @@ function displaySegments() {
     if (isDone) {
       actionsHtml = (isFinalized || !ownRoadFlow)
         ? ''
-        : `<button class="btn btn-warning btn-sm" onclick="editAuditedSegment(${seg.id})">✏️ Edit</button>`;
+        : `<button class="btn btn-warning btn-sm" data-segment-dyn="edit-audited" data-seg-id="${seg.id}">✏️ Edit</button>`;
     } else {
-      actionsHtml = `<button class="btn btn-primary btn-sm" onclick="auditSegment(${seg.id})">Start Audit</button>`;
+      actionsHtml = `<button class="btn btn-primary btn-sm" data-segment-dyn="audit-segment" data-seg-id="${seg.id}">Start Audit</button>`;
     }
 
     card.innerHTML = `

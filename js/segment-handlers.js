@@ -22,3 +22,14 @@
         list.forEach(function (pair) { el.addEventListener(pair[0], pair[1]); });
     });
 })();
+
+/* H6: segment page, buttons built by JavaScript */
+document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-segment-dyn]') : null;
+    if (!el) { return; }
+    switch (el.getAttribute('data-segment-dyn')) {
+        case 'road-select-custom': roadSelectCustom(); break;
+        case 'edit-audited':       editAuditedSegment(Number(el.getAttribute('data-seg-id'))); break;
+        case 'audit-segment':      auditSegment(Number(el.getAttribute('data-seg-id'))); break;
+    }
+});
