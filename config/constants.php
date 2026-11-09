@@ -165,6 +165,11 @@ function sendCspHeader(): void
     if (headers_sent()) {
         return;
     }
+
+    // Fresh per-request nonce for inline <script> blocks (pages read it as $_SESSION['csp_nonce'])
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION['csp_nonce'] = base64_encode(random_bytes(16));
+    }
     header(
         "Content-Security-Policy: " .
         "default-src 'self'; " .

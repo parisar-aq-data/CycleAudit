@@ -123,7 +123,7 @@ $focusEmail    = ($error !== '' && $prefillEmail === '');
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/login.css?v=<?= filemtime(__DIR__ . '/../css/login.css') ?>">
-  <script>document.documentElement.classList.add('js')</script>
+  <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">document.documentElement.classList.add('js')</script>
 </head>
 <body class="login">
 
