@@ -89,9 +89,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
           <input type="text" id="roadSearchInput" class="road-search-input"
                  placeholder="Search or type a road name…"
                  autocomplete="off"
-                 oninput="roadSearchFilter(this.value)"
-                 onfocus="roadDropdownOpen()"
-                 onkeydown="roadSearchKeydown(event)">
+                 data-segment-action="road-search">
           <div class="road-dropdown" id="roadDropdown"></div>
         </div>
 
@@ -103,7 +101,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
           <div class="form-group">
             <input type="text" id="customRoadName"
                    placeholder="Type the full road name (e.g. MODEL COLONY ROAD)"
-                   maxlength="200" oninput="validateCustomRoad(this)"
+                   maxlength="200" data-segment-action="validate-custom-road"
                    autocomplete="off" style="text-transform:uppercase">
             <div class="road-hint" id="customRoadHint">Min 3 characters. Use official road name if possible.</div>
           </div>
@@ -113,7 +111,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
 
       <div class="form-group">
         <label class="required">Total Road Length (meters)</label>
-        <input type="text" inputmode="decimal" id="roadLength" placeholder="e.g. 1500" oninput="sanitizeNumericInput(this)">
+        <input type="text" inputmode="decimal" id="roadLength" placeholder="e.g. 1500" data-segment-action="sanitize-numeric">
         <div class="input-hint">Minimum 50 m. Used to calculate segment distribution.</div>
         <div class="field-error" id="err-roadLength">Enter a valid length of at least 50 m.</div>
       </div>
@@ -145,7 +143,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
         <div id="customLengthInput" style="display:none">
           <div class="form-group">
             <label>Custom Length (meters)</label>
-            <input type="text" inputmode="decimal" id="customSegmentLength" placeholder="e.g. 150" oninput="sanitizeNumericInput(this)">
+            <input type="text" inputmode="decimal" id="customSegmentLength" placeholder="e.g. 150" data-segment-action="sanitize-numeric">
           </div>
         </div>
         <div class="preview-box" id="autoPreview">
@@ -163,7 +161,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
           </div>
         </div>
         <div class="btn-row" style="margin-top:16px">
-          <button class="btn btn-primary" onclick="generateAutoSegments()">
+          <button class="btn btn-primary" data-segment-action="generate-segments">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Generate &amp; Save Segments
           </button>
@@ -180,7 +178,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
         <div class="page-subtitle" id="roadRouteDisplay"></div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-secondary btn-sm" id="editRoadBtn" onclick="editRoadInfo()">✏️ Edit Road</button>
+        <button class="btn btn-secondary btn-sm" id="editRoadBtn" data-segment-action="edit-road">✏️ Edit Road</button>
       </div>
     </div>
 
@@ -215,22 +213,22 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
     </div>
 
     <div class="btn-row" id="bottomActions" style="justify-content:center;margin-top:24px;gap:14px;flex-wrap:wrap">
-      <button class="btn btn-secondary btn-lg" id="backToDashboardBtn" onclick="goToDashboard()" style="display:none">
+      <button class="btn btn-secondary btn-lg" id="backToDashboardBtn" data-segment-action="go-dashboard" style="display:none">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         Back to Dashboard
       </button>
-      <button class="btn btn-primary btn-lg" id="dlPdfBtn" onclick="downloadRoadScore()" style="display:none">
+      <button class="btn btn-primary btn-lg" id="dlPdfBtn" data-segment-action="download-score" style="display:none">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download Road Score PDF
       </button>
-      <button class="btn btn-primary btn-lg" id="finalSubmitBtn" onclick="finalizeRoad()" style="display:none">✅ Final Submit</button>
+      <button class="btn btn-primary btn-lg" id="finalSubmitBtn" data-segment-action="finalize-road" style="display:none">✅ Final Submit</button>
     </div>
   </div>
 
 </div>
 
 <!-- Edit Road Modal -->
-<div id="editModal" class="modal-overlay" onclick="if(event.target===this)closeEditModal()">
+<div id="editModal" class="modal-overlay" data-segment-action="modal-backdrop">
   <div class="modal-box">
     <div class="modal-icon">
       <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -239,8 +237,8 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
     <div class="modal-body" id="editModalBody"></div>
     <div class="modal-warning" id="editModalWarning"></div>
     <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmEditRoad()">Yes, Edit Road</button>
+      <button class="btn btn-secondary" data-segment-action="close-edit-modal">Cancel</button>
+      <button class="btn btn-primary" data-segment-action="confirm-edit-road">Yes, Edit Road</button>
     </div>
   </div>
 </div>
@@ -250,6 +248,7 @@ if (!$canDefineRoad && empty($_GET['road_id']) && ($_GET['status'] ?? '') !== 'd
 </script>
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/segment.js?v=<?= filemtime(__DIR__ . '/../js/segment.js') ?>"></script>
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/segment-roads.js?v=<?= filemtime(__DIR__ . '/../js/segment-roads.js') ?>"></script>
+<script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/segment-handlers.js?v=<?= filemtime(__DIR__ . '/../js/segment-handlers.js') ?>"></script>
 
 <?php if (!$canDefineRoad && (int)($_GET['road_id'] ?? 0) > 0): ?>
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/project_watch.js?v=<?= filemtime(__DIR__ . '/../js/project_watch.js') ?>" data-road-id="<?= (int)$_GET['road_id'] ?>" data-home="dashboard.php?notice=project_deleted"></script>
