@@ -16,7 +16,7 @@ class PasswordResetTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
-            password TEXT NULL, is_active INTEGER NOT NULL DEFAULT 1)');
+            password TEXT NULL, is_active INTEGER NOT NULL DEFAULT 1, password_changed_at TEXT NULL)');
         $this->pdo->exec('CREATE TABLE password_resets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
             token_hash TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL, used_at TEXT NULL, created_at TEXT NOT NULL,
             requested_ip TEXT NULL)');
@@ -138,6 +138,17 @@ class PasswordResetTest extends TestCase
         $this->assertNull(passwordResetLookup($this->pdo, $token, $this->t0 + 11));
         $this->assertFalse(passwordResetComplete($this->pdo, $token, 'another-one2', $this->t0 + 12), 'a link works once');
         $this->assertTrue(password_verify('brandnew1', $this->passwordOf(1)));
+    }
+
+    public function test_complete_ends_older_sign_ins_by_stamping_password_changed_at(): void
+    {
+        $token = passwordResetCreate($this->pdo, 1, '1.2.3.4', $this->t0);
+
+        $this->assertTrue(passwordResetComplete($this->pdo, $token, 'brandnew1', $this->t0 + 10));
+
+        $stamp = $this->pdo->query('SELECT password_changed_at FROM users WHERE id = 1')->fetchColumn();
+        $this->assertSame(gmdate('Y-m-d H:i:s', $this->t0 + 10), $stamp, 'stored in UTC');
+        $this->assertNull($this->pdo->query('SELECT password_changed_at FROM users WHERE id = 2')->fetchColumn(), 'other accounts untouched');
     }
 
     public function test_complete_refuses_expired_and_unknown_links(): void

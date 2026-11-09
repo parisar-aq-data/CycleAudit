@@ -13,6 +13,9 @@ require_once __DIR__ . '/../../config/auth_guard.php';
 require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../helpers/Cities.php';
+require_once __DIR__ . '/../../config/rate_limit.php';
+require_once __DIR__ . '/../../helpers/PasswordReset.php';   // passwordRuleError()
+require_once __DIR__ . '/../../helpers/PasswordRequest.php'; // passwordRequestStamp()
 
 header('Content-Type: application/json');
 
@@ -179,21 +182,40 @@ if ($action === 'update_email') {
 }
 
 // ── Action: change_password ────────────────────────────────────
+// Hardening (security review H3):
+//  * wrong "current password" guesses are limited per ACCOUNT (a stolen
+//    session must not be able to guess the password offline-style);
+//  * same password rules as sign-up (letter + number, max length);
+//  * password_changed_at is set so every OTHER sign-in of this user ends,
+//    and this session gets a fresh id and start time.
 if ($action === 'change_password') {
     $current = $body['current_password'] ?? '';
     $new     = $body['new_password']     ?? '';
     $confirm = $body['confirm_password'] ?? '';
 
-    if ($current === '' || $new === '' || $confirm === '') {
+    if (!is_string($current) || !is_string($new) || !is_string($confirm)
+        || $current === '' || $new === '' || $confirm === '') {
         json_out(false, error: 'All password fields are required.');
     }
 
-    if (strlen($new) < 8) {
-        json_out(false, error: 'New password must be at least 8 characters.');
+    // Per-account throttle. The "ip" column is a plain VARCHAR(45), so a
+    // "user:<id>" key keeps this separate from the IP-based limits.
+    $rlKey = 'user:' . (int)$CURRENT_USER_ID;
+    $rl    = checkRateLimit($pdo, $rlKey, 'change_password');
+    if (!$rl['allowed']) {
+        http_response_code(429);
+        header('Retry-After: ' . (int)($rl['retry_after'] ?? 900));
+        echo json_encode(['success' => false, 'error' => $rl['message']]);
+        exit;
     }
 
-    if ($new !== $confirm) {
-        json_out(false, error: 'New passwords do not match.');
+    $ruleError = passwordRuleError($new, $confirm);
+    if ($ruleError !== null) {
+        json_out(false, error: $ruleError);
+    }
+    // bcrypt only uses the first 72 bytes; a huge body is also a CPU cost.
+    if (strlen($new) > 128 || strlen($current) > 128) {
+        json_out(false, error: 'Password must be at most 128 characters.');
     }
 
     $stmt = $pdo->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
@@ -201,6 +223,7 @@ if ($action === 'change_password') {
     $row = $stmt->fetch();
 
     if (!$row || !password_verify($current, (string)$row['password'])) {
+        recordFailedAttempt($pdo, $rlKey, 'change_password');
         json_out(false, error: 'Current password is incorrect.');
     }
 
@@ -209,11 +232,27 @@ if ($action === 'change_password') {
     }
 
     try {
-        $hash = password_hash($new, PASSWORD_BCRYPT);
-        $pdo->prepare('UPDATE users SET password = ? WHERE id = ?')
-            ->execute([$hash, $CURRENT_USER_ID]);
+        $now  = time();
+        $hash = password_hash($new, PASSWORD_DEFAULT);
+        try {
+            $pdo->prepare('UPDATE users SET password = ?, password_changed_at = ? WHERE id = ?')
+                ->execute([$hash, passwordRequestStamp($now), $CURRENT_USER_ID]);
+        } catch (PDOException $e) {
+            // Migration 026 (password_changed_at) not applied yet: still change the
+            // password, but log loudly because other sessions will NOT be ended.
+            error_log('profile change_password: password_changed_at missing: ' . $e->getMessage());
+            $pdo->prepare('UPDATE users SET password = ? WHERE id = ?')
+                ->execute([$hash, $CURRENT_USER_ID]);
+        }
+        clearRateLimitAttempts($pdo, $rlKey, 'change_password');
+
+        // Keep THIS browser signed in; every other session of the user ends because
+        // passwordChangedSinceLogin() sees password_changed_at >= their auth_at.
+        session_regenerate_id(true);
+        $_SESSION['auth_at'] = $now + 1;
+
         ActivityLogger::log($pdo, ActivityLogger::PASSWORD_CHANGED, (int)$CURRENT_USER_ID, ['source' => 'profile']);
-        json_out(true, ['message' => 'Password changed successfully.']);
+        json_out(true, ['message' => 'Password changed successfully. Other devices have been signed out.']);
     } catch (Throwable $e) {
         error_log('profile change_password error: ' . $e->getMessage());
         json_out(false, error: 'Server error changing password.');
