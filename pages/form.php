@@ -110,7 +110,7 @@ if ($segNum > 0) {
   <?php endif; ?>
 </div>
 
-<form id="auditForm" data-segment-length="<?php echo htmlspecialchars((string)$segLength, ENT_QUOTES, 'UTF-8'); ?>" onsubmit="event.preventDefault(); submitFullAudit();">
+<form id="auditForm" data-segment-length="<?php echo htmlspecialchars((string)$segLength, ENT_QUOTES, 'UTF-8'); ?>" data-form-action="submit-audit">
 
   <!-- Hidden fields — populated by form.js from URL params -->
   <input type="hidden" name="segment_id" id="segment_id">
@@ -124,15 +124,15 @@ if ($segNum > 0) {
       <h4>Reset the Form?</h4>
       <p>All entered data will be permanently cleared.</p>
       <div class="confirm-btns">
-        <button type="button" class="confirm-yes" onclick="doReset()">Yes, Reset</button>
-        <button type="button" class="confirm-no"  onclick="closeConfirm()">Cancel</button>
+        <button type="button" class="confirm-yes" data-form-action="do-reset">Yes, Reset</button>
+        <button type="button" class="confirm-no"  data-form-action="close-confirm">Cancel</button>
       </div>
     </div>
   </div>
 
   <!-- Scroll-to-top -->
   <button type="button" id="scrollTopBtn"
-          onclick="window.scrollTo({top:0,behavior:'smooth'})"
+          data-form-action="scroll-top"
           title="Back to top">↑</button>
 
   <div class="container">
@@ -176,7 +176,7 @@ if ($segNum > 0) {
           <div class="field-group req-field" id="wrap-startLandmark">
             <label>Start Point Landmark <span class="required-star">*</span></label>
             <input type="text" id="startLandmark" name="start_landmark"
-                   oninput="clearError('wrap-startLandmark')"
+                   data-form-action="clear-error" data-fa-arg="wrap-startLandmark"
                    autocomplete="off" placeholder="e.g. Near SBI Bank">
             <span class="error-msg">This field is required</span>
           </div>
@@ -185,10 +185,10 @@ if ($segNum > 0) {
             <div class="gps-input-row">
               <input type="text" id="gpsStart" name="gps_start"
                      readonly
-                     oninput="clearError(this.id)"
+                     data-form-action="clear-error-self"
                      autocomplete="off"
                      placeholder="Tap GPS to capture your location">
-              <button type="button" class="gps-btn" onclick="fillGPS('gpsStart')" title="Use my current location">
+              <button type="button" class="gps-btn" data-form-action="fill-gps" data-fa-arg="gpsStart" title="Use my current location">
                 <span class="gps-btn-icon">GPS</span>
               </button>
             </div>
@@ -213,7 +213,7 @@ if ($segNum > 0) {
         <div class="field-group" id="wrap-noObstructions">
           <div class="options">
             <label><input type="checkbox" id="noObstructions" name="no_obstructions" value="1"
-                          onchange="clearReqError('wrap-noObstructions')"> No obstructions on this segment</label>
+                          data-form-action="clear-req-error" data-fa-arg="wrap-noObstructions"> No obstructions on this segment</label>
           </div>
         </div>
       </div>
@@ -236,8 +236,7 @@ if ($segNum > 0) {
           <div class="search-wrapper" id="fixedWrapper">
             <input type="text"
                    placeholder="Click to see options or type to search…"
-                   oninput="filterList('fixed',this)"
-                   onfocus="openDropdown('fixed')"
+                   data-form-action="dropdown-search" data-fa-arg="fixed"
                    autocomplete="off">
             <div class="checkbox-container" id="fixedList"></div>
           </div>
@@ -264,8 +263,7 @@ if ($segNum > 0) {
           <div class="search-wrapper" id="movableWrapper">
             <input type="text"
                    placeholder="Click to see options or type to search…"
-                   oninput="filterList('movable',this)"
-                   onfocus="openDropdown('movable')"
+                   data-form-action="dropdown-search" data-fa-arg="movable"
                    autocomplete="off">
             <div class="checkbox-container" id="movableList"></div>
           </div>
@@ -292,8 +290,7 @@ if ($segNum > 0) {
           <div class="search-wrapper" id="parkedWrapper">
             <input type="text"
                    placeholder="Click to see options or type to search…"
-                   oninput="filterList('parked',this)"
-                   onfocus="openDropdown('parked')"
+                   data-form-action="dropdown-search" data-fa-arg="parked"
                    autocomplete="off">
             <div class="checkbox-container" id="parkedList"></div>
           </div>
@@ -320,15 +317,15 @@ if ($segNum > 0) {
           <label class="field-label">Cycle Track Missing <span class="required-star">*</span></label>
           <div class="options">
             <label><input type="radio" name="cycle_track_missing" value="Yes"
-                          onchange="toggleMissingLength(this)"> Yes</label>
+                          data-form-action="toggle-missing-length"> Yes</label>
             <label><input type="radio" name="cycle_track_missing" value="No"
-                          onchange="toggleMissingLength(this)"> No</label>
+                          data-form-action="toggle-missing-length"> No</label>
           </div>
           <div id="missingLengthBox">
             <label>⚠ Missing Length (m) <span class="required-star">*</span></label>
             <input type="text" inputmode="decimal" id="missingLength" name="missing_length"
                    placeholder="Enter missing cycle track length in meters"
-                   oninput="missingLengthInput(this)" onblur="missingLengthBlur(this)">
+                   data-form-action="missing-length">
           </div>
         </div>
 
@@ -383,12 +380,12 @@ if ($segNum > 0) {
         <div class="field-group" id="wrap-noIntersections">
           <div class="options">
             <label><input type="checkbox" id="noIntersections" name="no_intersections" value="1"
-                          onchange="clearReqError('wrap-noIntersections')"> No intersections in this segment</label>
+                          data-form-action="clear-req-error" data-fa-arg="wrap-noIntersections"> No intersections in this segment</label>
           </div>
         </div>
         <div id="intersectionsContainer"></div>
         <button type="button" class="btn-add-intersection"
-                onclick="addIntersection()">＋ Add Intersection</button>
+                data-form-action="add-intersection">＋ Add Intersection</button>
       </div>
     </div>
 
@@ -410,19 +407,19 @@ if ($segNum > 0) {
         <div class="field-group">
           <div class="options">
             <label><input type="checkbox" name="footpath_rating[]" value="minWidth"
-                          onchange="updateFootpathScore()">
+                          data-form-action="footpath-score">
               Min 1.8m wide</label>
             <label><input type="checkbox" name="footpath_rating[]" value="continuous"
-                          onchange="updateFootpathScore()">
+                          data-form-action="footpath-score">
               Continuous and levelled</label>
             <label><input type="checkbox" name="footpath_rating[]" value="obstructionFree"
-                          onchange="updateFootpathScore()">
+                          data-form-action="footpath-score">
               Obstruction free</label>
             <label><input type="checkbox" name="footpath_rating[]" value="disabledFriendly"
-                          onchange="updateFootpathScore()">
+                          data-form-action="footpath-score">
               Disabled friendly — access ramps with tactile tiles</label>
             <label><input type="checkbox" name="footpath_rating[]" value="comfort"
-                          onchange="updateFootpathScore()">
+                          data-form-action="footpath-score">
               Comfort — tree shade with seating spaces</label>
           </div>
         </div>
@@ -467,14 +464,12 @@ if ($segNum > 0) {
           <div style="margin-top:8px">
             <div class="counter-row" style="padding:0">
               <div class="counter-ctrl">
-                <button type="button" onclick="adjustCounter('signageCount',-1)">−</button>
+                <button type="button" data-form-action="adjust-counter" data-fa-arg="signageCount" data-fa-delta="-1">−</button>
                 <input type="text" inputmode="numeric" pattern="[0-9]*"
                        id="signageCount" name="signage_count"
                        value="" placeholder="0"
-                       oninput="counterInput('signageCount')"
-                       onblur="counterBlur('signageCount')"
-                       onwheel="event.preventDefault()">
-                <button type="button" onclick="adjustCounter('signageCount',1)">+</button>
+                       data-form-action="counter" data-fa-arg="signageCount">
+                <button type="button" data-form-action="adjust-counter" data-fa-arg="signageCount" data-fa-delta="1">+</button>
               </div>
             </div>
           </div>
@@ -556,7 +551,7 @@ if ($segNum > 0) {
           <div class="field-group req-field" id="wrap-endLandmark">
             <label>End Point Landmark <span class="required-star">*</span></label>
             <input type="text" id="endLandmark" name="end_landmark"
-                   oninput="clearError('wrap-endLandmark')"
+                   data-form-action="clear-error" data-fa-arg="wrap-endLandmark"
                    autocomplete="off" placeholder="e.g. Near University Gate">
             <span class="error-msg">This field is required</span>
           </div>
@@ -565,10 +560,10 @@ if ($segNum > 0) {
             <div class="gps-input-row">
               <input type="text" id="gpsEnd" name="gps_end"
                      readonly
-                     oninput="clearError(this.id)"
+                     data-form-action="clear-error-self"
                      autocomplete="off"
                      placeholder="Tap GPS to capture your location">
-              <button type="button" class="gps-btn" onclick="fillGPS('gpsEnd')" title="Use my current location">
+              <button type="button" class="gps-btn" data-form-action="fill-gps" data-fa-arg="gpsEnd" title="Use my current location">
                 <span class="gps-btn-icon">GPS</span>
               </button>
             </div>
@@ -593,7 +588,7 @@ if ($segNum > 0) {
         <div class="field-group">
           <label class="field-label">Width of Segment (m)</label>
           <input type="text" inputmode="decimal" id="segment_width_input" name="segment_width"
-                 placeholder="e.g. 2.5" oninput="sanitizeNumericInput(this)">
+                 placeholder="e.g. 2.5" data-form-action="sanitize-numeric">
         </div>
         <div class="field-group" style="margin-top:14px">
           <label class="field-label">Surveyor's Comments</label>
@@ -607,7 +602,7 @@ if ($segNum > 0) {
     <!-- Submit & Reset -->
     <div class="form-actions">
       <button type="submit" class="btn">✓ Submit Full Audit</button>
-      <button type="button" class="btn-reset" onclick="resetForm()">
+      <button type="button" class="btn-reset" data-form-action="reset-form">
         🔄 Reset / Clear Form
       </button>
     </div>
@@ -615,6 +610,7 @@ if ($segNum > 0) {
   </div><!-- /.container -->
 </form>
 
+<script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/form-handlers.js?v=<?= filemtime(__DIR__ . '/../js/form-handlers.js') ?>"></script>
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/form.js?v=<?= filemtime(__DIR__ . '/../js/form.js') ?>"></script>
 
 <?php if ($segmentIdParam > 0): ?>

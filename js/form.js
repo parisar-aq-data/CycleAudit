@@ -115,7 +115,7 @@ function renderList(type, filter) {
         <label>
           <input type="checkbox" id="${id}"
                  ${checked ? 'checked' : ''}
-                 onchange="toggleObstruction('${type}','${item}')">
+                 data-form-dyn="toggle-obstruction" data-fa-type="${type}" data-fa-item="${item}">
           ${item}
         </label>
       </div>`);
@@ -212,14 +212,13 @@ function makeCounter(id, labelText) {
     <div class="counter-row">
       <span class="counter-label">${labelText}</span>
       <div class="counter-ctrl">
-        <button type="button" onclick="adjustCounter('${id}',-1)">-</button>
+        <button type="button" data-form-dyn="adjust-counter" data-fa-id="${id}" data-fa-delta="-1">-</button>
         <input type="text" inputmode="numeric" pattern="[0-9]*"
                id="${id}" name="${id}" value=""
                placeholder="0"
-               oninput="counterInput('${id}')"
-               onblur="counterBlur('${id}')"
+               data-form-dyn="counter" data-fa-id="${id}"
                onwheel="event.preventDefault()">
-        <button type="button" onclick="adjustCounter('${id}',1)">+</button>
+        <button type="button" data-form-dyn="adjust-counter" data-fa-id="${id}" data-fa-delta="1">+</button>
       </div>
     </div>`;
 }
@@ -310,7 +309,7 @@ function buildIntersectionBody(uid) {
       <div>
         <label>GPS Coordinates</label>
         <div class="gps-input-row"><input type="text" id="${p}gps" name="${p}gps" readonly placeholder="Tap GPS to capture your location">
-                 <button type="button" class="gps-btn" onclick="fillGPS('${p}gps')"
+                 <button type="button" class="gps-btn" data-form-dyn="fill-gps" data-fa-target="${p}gps"
                          title="Auto-fill from device location">
                    <span class="gps-btn-icon">GPS</span>
                  </button>
@@ -375,7 +374,7 @@ function buildIntersectionBody(uid) {
     </div>
     <div class="int-divider"></div>
     <button type="button" class="btn-remove-int"
-            onclick="removeIntersection(${uid})">
+            data-form-dyn="remove-intersection" data-fa-uid="${uid}">
       <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       Remove
     </button>`;
@@ -390,7 +389,7 @@ function addIntersection() {
   card.id        = 'intCard_' + uid;
   card.innerHTML = `
     <div class="int-header open" id="intHeader_${uid}"
-         onclick="toggleIntersection(${uid})">
+         data-form-dyn="toggle-intersection" data-fa-uid="${uid}">
       <div class="int-header-left">
         <div class="int-badge">${intersections.length}</div>
         <span class="int-title">Intersection ${intersections.length}</span>
@@ -1172,7 +1171,7 @@ const FormStateManager = (() => {
       'background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;' +
       'z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;gap:12px;align-items:center;';
     div.innerHTML = '💾 Draft restored from your last session. ' +
-      '<button onclick="FormStateManager.clear();document.getElementById(\'fsm-banner\').remove();location.reload();" ' +
+      '<button data-form-dyn="fsm-reload" ' +
       'style="background:transparent;border:1px solid #fff;color:#fff;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:12px;">Discard</button>';
     document.body.appendChild(div);
     setTimeout(() => { if (div.parentNode) div.remove(); }, 8000);
