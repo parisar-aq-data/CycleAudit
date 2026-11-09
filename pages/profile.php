@@ -81,17 +81,17 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
     <!-- Profile Hero -->
     <div class="profile-hero">
       <div class="avatar-wrap">
-        <div class="avatar-lg" id="avatar-display" onclick="document.getElementById('avatar-file').click()">
+        <div class="avatar-lg" id="avatar-display" data-profile-action="pick-avatar">
           <?php if ($CURRENT_USER_PIC): ?>
             <img id="avatar-img" src="<?= htmlspecialchars($CURRENT_USER_PIC) ?>" alt="Profile Picture">
           <?php else: ?>
             <span id="avatar-initials"><?= htmlspecialchars($initials) ?></span>
           <?php endif; ?>
         </div>
-        <div class="avatar-edit-btn" onclick="document.getElementById('avatar-file').click()" title="Change photo">
+        <div class="avatar-edit-btn" data-profile-action="pick-avatar" title="Change photo">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
         </div>
-        <input type="file" id="avatar-file" accept="image/*" onchange="uploadAvatar(this)">
+        <input type="file" id="avatar-file" accept="image/*" data-profile-action="upload-avatar">
       </div>
 
       <div class="hero-info">
@@ -127,7 +127,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
           </div>
           <div class="field">
             <label>Phone Number</label>
-            <input type="tel" inputmode="numeric" id="f-phone" placeholder="e.g. 9876543210" maxlength="10" oninput="sanitizePhoneInput(this)">
+            <input type="tel" inputmode="numeric" id="f-phone" placeholder="e.g. 9876543210" maxlength="10" data-profile-action="sanitize-phone">
           </div>
           <div class="field">
             <label>Organisation *</label>
@@ -170,11 +170,11 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
         </div>
 
         <div class="form-actions">
-          <button class="btn btn-primary" id="btn-save-profile" onclick="saveProfile()">
+          <button class="btn btn-primary" id="btn-save-profile" data-profile-action="save-profile">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
             Save Changes
           </button>
-          <button class="btn btn-outline" onclick="loadProfile()">Reset</button>
+          <button class="btn btn-outline" data-profile-action="reset-profile">Reset</button>
         </div>
       </div>
     </div>
@@ -200,7 +200,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" onclick="updateEmail()">
+          <button class="btn btn-primary" data-profile-action="update-email">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
             Update Email
           </button>
@@ -220,7 +220,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
           </div>
           <div class="field">
             <label>New Password</label>
-            <input type="password" id="f-new-pw" placeholder="At least 8 characters" oninput="checkStrength(this.value)">
+            <input type="password" id="f-new-pw" placeholder="At least 8 characters" data-profile-action="check-strength">
             <div class="pw-strength"><div class="pw-strength-bar" id="pw-bar"></div></div>
             <span class="field-hint" id="pw-hint">Enter a new password</span>
           </div>
@@ -230,7 +230,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" onclick="changePassword()">
+          <button class="btn btn-primary" data-profile-action="change-password">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
             Change Password
           </button>
@@ -247,7 +247,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/profile.js"></script>
 <button class="sb-hamburger" id="sb-toggle" aria-label="Menu">&#9776;</button>
 <div class="sb-overlay" id="sb-overlay"></div>
-<script>
+<script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
 const tog = document.getElementById("sb-toggle");
 const ovl = document.getElementById("sb-overlay");
 const aside = document.querySelector("aside");
