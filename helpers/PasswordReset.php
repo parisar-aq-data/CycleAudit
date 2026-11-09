@@ -150,8 +150,18 @@ function passwordResetComplete(PDO $pdo, string $token, string $newPassword, ?in
             return false;
         }
 
-        $pdo->prepare('UPDATE users SET password = ? WHERE id = ?')
-            ->execute([password_hash($newPassword, PASSWORD_DEFAULT), $user['user_id']]);
+        // password_changed_at ends every sign-in that started before this reset
+        // (see passwordChangedSinceLogin() in helpers/PasswordRequest.php).
+        $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        try {
+            $pdo->prepare('UPDATE users SET password = ?, password_changed_at = ? WHERE id = ?')
+                ->execute([$newHash, gmdate('Y-m-d H:i:s', $now), $user['user_id']]);   // UTC, as passwordChangedSinceLogin() reads it
+        } catch (PDOException $e) {
+            // Column not there yet (migration 026): still reset, but log it.
+            error_log('passwordResetComplete: password_changed_at missing: ' . $e->getMessage());
+            $pdo->prepare('UPDATE users SET password = ? WHERE id = ?')
+                ->execute([$newHash, $user['user_id']]);
+        }
 
         $pdo->prepare('UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL')
             ->execute([passwordResetStamp($now), $user['user_id']]);
