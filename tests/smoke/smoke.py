@@ -63,8 +63,12 @@ if BASE.startswith("https://"):
     for path in ("/.env", "/.git/config", "/logs/app.log", "/composer.json", "/Dockerfile", "/migrations/032_user_approval.sql",
                  "/config/constants.php", "/helpers/Registration.php"):
         r, _ = get(path)
-        exposed = r.status_code == 200 and r.text.strip() != ""
-        check(f"{path} is not exposed", not exposed, f"HTTP {r.status_code}")
+        # A missing file can still be answered with the site's own HTML page (HTTP 200). That is not a leak.
+        # Only a non-HTML body (plain text, JSON, SQL, ...) counts as a real file being served.
+        ctype = r.headers.get("Content-Type", "").lower()
+        is_site_page = "text/html" in ctype and r.text.lstrip()[:15].lower().startswith(("<!doctype html", "<html"))
+        exposed = r.status_code == 200 and r.text.strip() != "" and not is_site_page
+        check(f"{path} is not exposed", not exposed, f"HTTP {r.status_code}, {ctype or 'no content-type'}")
 
     # 4b. Browser security headers set by .htaccess
     r, _ = get("/auth/login.php")
