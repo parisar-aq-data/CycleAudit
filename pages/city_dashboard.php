@@ -145,6 +145,7 @@ $greeting     = cityGreeting($hour);
 
     <?php if (!$isNational) { require __DIR__ . '/partials/notifications.php'; } ?>
     <?php if (!$isNational) { require __DIR__ . '/partials/password_requests.php'; } ?>
+    <?php if (!$isNational) { require __DIR__ . '/partials/signup_requests.php'; } ?>
 
     <div class="cx-kpis">
       <div class="cx-kpi"><span class="cx-kpi-ico g"><?= cxIcon('route') ?></span><div><b><?= count($openAudits) ?></b><span>Open audits<?= $completedAudits ? ' · ' . count($completedAudits) . ' completed' : '' ?></span></div></div>

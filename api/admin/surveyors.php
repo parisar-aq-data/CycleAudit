@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../helpers/CityLeaderAssign.php';
 require_once __DIR__ . '/../../helpers/ActivityLogger.php';
 require_once __DIR__ . '/../../helpers/RoleRules.php';
 require_once __DIR__ . '/../../helpers/WorkNotify.php';
+require_once __DIR__ . '/../../helpers/Registration.php';   // security review H1
 
 $isNationalAdmin = $CURRENT_USER_ROLE === 'admin';
 
@@ -27,6 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $where  = 'WHERE u.city_id = ?';
         $params = [$CURRENT_USER_CITY_ID];
     }
+
+    // People who signed up themselves wait for approval (needs migration 032; without it nobody does).
+    $hasApproval   = usersHaveApprovalStatus($pdo);
+    $approvalSelect = $hasApproval ? 'u.approval_status' : "'approved'";
+    $approvalFirst  = $hasApproval ? "(u.approval_status = 'pending') DESC, " : '';
 
     $stmt = $pdo->prepare(
         "SELECT
@@ -42,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             u.home_state,
             u.profile_picture,
             u.is_active,
+            $approvalSelect AS approval_status,
             u.last_login,
             u.created_at,
             (SELECT COUNT(*) FROM roads r WHERE r.creator_id = u.id) AS roads_created,
@@ -50,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
          FROM users u
          LEFT JOIN cities c ON c.id = u.city_id
          $where
-        ORDER BY u.is_active DESC, u.role = 'admin' DESC, u.role = 'city_leader' DESC, u.name ASC"
+        ORDER BY {$approvalFirst}u.is_active DESC, u.role = 'admin' DESC, u.role = 'city_leader' DESC, u.name ASC"
     );
     $stmt->execute($params);
     $surveyors = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -61,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $s['roads_created']    = (int)$s['roads_created'];
         $s['segments_audited'] = (int)$s['segments_audited'];
         $s['is_active']        = (bool)$s['is_active'];
+        $s['approval_status']  = (string)($s['approval_status'] ?? 'approved');
         $s['is_current_user']  = $s['id'] === $CURRENT_USER_ID;
         $s['is_primary_admin'] = $primaryAdminId !== null && $s['id'] === $primaryAdminId;
         $s['has_profile_picture'] = $s['profile_picture'] !== null && $s['profile_picture'] !== '';
@@ -342,6 +350,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Reactivating (or cancelling a waiting removal) forgets any removal that was waiting.
         if ($active) {
             $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = ?")->execute([$targetId]);
+            markUserApproved($pdo, $targetId);   // clears 'waiting for approval' when that is what this was
             (new SurveyorRemovalRepository($pdo))->cancel($targetId);
             ActivityLogger::log($pdo, ActivityLogger::USER_ACTIVATED, $CURRENT_USER_ID, ['user_id' => $targetId]);
             echo json_encode(['success' => true, 'mode' => 'active']);

@@ -35,6 +35,7 @@
             <file>tests/LogoNormalizerTest.php</file>
             <file>tests/SurveyorRemovalTest.php</file>
             <file>tests/ActivityLogViewTest.php</file>
+            <file>tests/RegistrationApprovalTest.php</file>
         </testsuite>
         <testsuite name="Integration">
             <file>tests/SegmentRepositoryTest.php</file>

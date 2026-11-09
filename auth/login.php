@@ -49,7 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user && $passwordOk) {
                 if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
-                    $error = 'This account has been deactivated. Please contact an administrator.';
+                    // Waiting for approval (security review H1) reads differently from a deactivation.
+                    $approval = (string)($user['approval_status'] ?? 'approved');
+                    if ($approval === 'pending') {
+                        $error = 'Your account is waiting for approval by your City Leader. You can sign in as soon as it is approved.';
+                    } elseif ($approval === 'rejected') {
+                        $error = 'Your sign-up request was not approved. Please contact your City Leader or an administrator.';
+                    } else {
+                        $error = 'This account has been deactivated. Please contact an administrator.';
+                    }
                     ActivityLogger::log($pdo, ActivityLogger::USER_LOGIN_FAILED, (int)$user['id'], ['email' => mb_substr($email, 0, 100), 'reason' => 'deactivated']);
                 } else {
                 // ── Successful local login ─────────────────────

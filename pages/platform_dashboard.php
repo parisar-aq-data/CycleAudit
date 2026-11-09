@@ -118,6 +118,7 @@ $today     = (new DateTime('now', new DateTimeZone('Asia/Kolkata')))->format('Y-
     </section>
 
     <?php if ($CURRENT_USER_ROLE === 'admin') { require __DIR__ . '/partials/password_requests.php'; } ?>
+    <?php if ($CURRENT_USER_ROLE === 'admin') { require __DIR__ . '/partials/signup_requests.php'; } ?>
 
     <?php if (($_GET['notice'] ?? '') === 'project_deleted_ok'): ?>
     <div class="card" role="status" style="border-left:4px solid #16a34a;background:#f0fdf4">

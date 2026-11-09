@@ -28,12 +28,15 @@ if (isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../helpers/Cities.php';
 require_once __DIR__ . '/../services/IdGenerator.php';
+require_once __DIR__ . '/../helpers/Registration.php';   // security review H1
 
 $errors      = [];
 $success     = false;
 $rateLimited = false;
 $clientIp    = getClientIp();
 $cities      = listCities($pdo);
+$approvalReady  = usersHaveApprovalStatus($pdo);   // false until migration 032 has run
+$failureIsOurs  = false;                           // our own refusals must not count against the visitor
 
 // ── Rate limit registrations (own 'register' bucket — independent
 //    from login attempts, so a login lockout never blocks
@@ -114,6 +117,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimited) {
     }
 
     // ── Duplicate email check ─────────────────────────────────
+    // Sign-up stays closed (fails shut) until migration 032 has run.
+    if (empty($errors) && !$approvalReady) {
+        error_log('register: users.approval_status is missing - run migrations/032_user_approval.sql');
+        $errors['rate_limit'] = 'Sign-up is temporarily unavailable. Please contact your City Leader.';
+        $failureIsOurs = true;
+    }
+
     if (empty($errors)) {
         $st = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
         $st->execute([$email]);
@@ -123,13 +133,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimited) {
     }
 
     // ── Insert ────────────────────────────────────────────────
+    // At most REGISTER_OK_MAX_PER_HOUR new accounts per network per hour: a script
+    // can no longer create accounts without limit.
+    if (empty($errors)) {
+        $okCap = checkAndRecordApiRequest($pdo, $clientIp, 'register_ok', REGISTER_OK_MAX_PER_HOUR, 3600);
+        if (!$okCap['allowed']) {
+            $errors['rate_limit'] = 'Too many accounts were created from this network. Please try again in an hour, or ask your City Leader to add you.';
+            $failureIsOurs = true;
+        }
+    }
+
     if (empty($errors)) {
         $hash = password_hash($pass, PASSWORD_DEFAULT);
         $pdo->prepare(
             'INSERT INTO users
                (name, email, phone, organisation, gender, age, password,
-                city_id, home_city, home_state, role, auth_provider, email_verified, last_login)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'surveyor\', \'local\', 1, NOW())'
+                city_id, home_city, home_state, role, auth_provider, email_verified, last_login,
+                is_active, approval_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'surveyor\', \'local\', 0, NULL, 0, \'pending\')'
         )->execute([
             $name,
             $email,
@@ -150,29 +171,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimited) {
         $pdo->prepare('UPDATE users SET public_id = ? WHERE id = ?')
             ->execute([$publicId, $newId]);
 
-        // ── FIX 2: Auto-login the new user immediately ────────────
-        ActivityLogger::log($pdo, ActivityLogger::USER_REGISTERED, (int)$newId, ['email' => mb_substr((string)$email, 0, 100)]);
+        // Sign-up needs approval (security review H1): no sign-in and no session.
+        // The account is inactive and 'pending' until the City Leader (or an Admin)
+        // approves it on the Users page.
+        ActivityLogger::log($pdo, ActivityLogger::USER_REGISTERED, (int)$newId,
+            ['email' => mb_substr((string)$email, 0, 100), 'status' => 'pending']);
 
-        session_regenerate_id(true);
-        $_SESSION['user_id']         = $newId;
-        $_SESSION['user_name']       = $name;
-        $_SESSION['user_email']      = $email;
-        $_SESSION['user_role']       = 'surveyor';
-        $_SESSION['profile_picture'] = null;
-        $_SESSION['auth_at']         = time();   // see passwordChangedSinceLogin()
-
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-
-        // Successful registration — clear this IP's register attempt count
         clearRateLimitAttempts($pdo, $clientIp, 'register');
-
-        header('Location: ../pages/dashboard.php');
-        exit;
+        $success = true;
     } else {
         // Validation or duplicate-email failure — count it as a failed attempt
-        recordFailedAttempt($pdo, $clientIp, 'register');
+        if (!$failureIsOurs) {
+            recordFailedAttempt($pdo, $clientIp, 'register');
+        }
     }
 }
 
@@ -267,6 +278,11 @@ function ic(string $name): string
       <div class="alert" role="alert" id="reg-alert"><?= ic('alert') ?> Please fix the highlighted <?= count($errors) === 1 ? 'field' : 'fields' ?> below.</div>
       <?php endif; ?>
 
+      <?php if ($success): ?>
+      <div class="alert alert--ok" role="status">Thank you, <?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>. Your request has been sent.</div>
+      <p class="reg-note">Your City Leader (or a Parisar administrator) will check your details and switch your account on. You can sign in as soon as it is approved. If you are not sure who your City Leader is, ask the person who invited you to CycleAudit.</p>
+      <p class="reg-sub"><a href="login.php">Back to sign in</a></p>
+      <?php else: ?>
       <form method="POST" novalidate id="reg-form" class="reg-form card-form">
 
         <fieldset class="grp">
@@ -389,9 +405,10 @@ function ic(string $name): string
           </div>
         </fieldset>
 
-        <button type="submit" class="btn-submit"><span class="btn-label">Create surveyor account</span><?= ic('arrow') ?></button>
-        <p class="reg-note">Your account is created straight away and you go to your dashboard, ready to start auditing.</p>
+        <button type="submit" class="btn-submit"><span class="btn-label">Request surveyor account</span><?= ic('arrow') ?></button>
+        <p class="reg-note">Your City Leader checks your request before your account is switched on. You can sign in as soon as it is approved.</p>
       </form>
+      <?php endif; ?>
     </section>
   </main>
 
