@@ -9,7 +9,7 @@ They run automatically on every pull request (`.github/workflows/e2e.yml`).
 ## What is covered
 - `test_signup_approval.py` - H1: register, blocked until approved, approve / reject / reactivate, per-city rules, CSRF, sign-up cap
 - `test_sessions_passwords.py` - H3: a password change ends other sessions; wrong-password throttle; deactivation ends a live session
-- `test_access_control.py` - who may open what, CSRF on writes, login lockout, no account-existence leak, CSP gap (expected failure until H6)
+- `test_access_control.py` - who may open what, CSRF on writes, login lockout, no account-existence leak, Content-Security-Policy on the sign-in pages (H6)
 - `test_browser_flows.py` - the same sign-up/approval and two-browser password flows, clicked in Chromium
 
 `tests/smoke/smoke.py` is separate: read-only checks of the live site (`.github/workflows/smoke.yml`).

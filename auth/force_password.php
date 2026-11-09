@@ -16,6 +16,7 @@ require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../helpers/ActivityLogger.php';
 
 startSecureSession();
+sendCspHeader();
 enforceSessionTimeout();
 
 if (!isset($_SESSION['user_id'])) {
