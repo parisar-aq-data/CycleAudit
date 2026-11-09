@@ -97,7 +97,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 1));
     </div>
 
     <!-- Trigger button -->
-    <button class="sb-user-btn" id="sbUserBtn" onclick="toggleUserMenu()">
+    <button class="sb-user-btn" id="sbUserBtn" data-dash-action="toggle-user-menu">
       <div class="sb-avatar" id="sb-av">
         <?php if ($CURRENT_USER_PIC): ?>
           <img src="<?= htmlspecialchars($CURRENT_USER_PIC) ?>" alt="">
@@ -175,7 +175,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 1));
     <h4>Delete Road?</h4>
     <p id="deleteModalMsg">This will permanently delete the road and all its segments, sessions and audit data.</p>
     <div class="modal-btns">
-      <button class="mbtn-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="mbtn-cancel" data-dash-action="close-delete-modal">Cancel</button>
       <button class="mbtn-delete" id="confirmDeleteBtn">Delete</button>
     </div>
   </div>
@@ -187,8 +187,9 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 1));
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">const CSRF = '<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>';</script>
 <script src="../js/notifications.js?v=<?= filemtime(__DIR__ . '/../js/notifications.js') ?>"></script>
 <script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>" src="../js/dashboard.js?v=<?= filemtime(__DIR__ . '/../js/dashboard.js') ?>"></script>
+<script src="../js/dashboard-handlers.js?v=<?= filemtime(__DIR__ . '/../js/dashboard-handlers.js') ?>"></script>
 <div class="sb-overlay" id="sb-overlay"></div>
-<script>
+<script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
 const tog = document.getElementById("sb-toggle");
 const ovl = document.getElementById("sb-overlay");
 const aside = document.querySelector("aside");

@@ -253,7 +253,7 @@ $logoBase64 = file_exists($logoPath)
   <div class="toolbar-btns">
     <a href="dashboard.php" class="tbtn tbtn-back">← Dashboard</a>
     <a href="../api/reports/export-excel.php?session_id=<?= $sessionId ?>" class="tbtn tbtn-excel">⬇ Excel</a>
-    <button class="tbtn tbtn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="tbtn tbtn-print" data-report-action="print">🖨 Print / Save PDF</button>
   </div>
 </div>
 
@@ -608,5 +608,6 @@ $logoBase64 = file_exists($logoPath)
   </div>
 
 </div><!-- /.report -->
+<script src="../js/report-handlers.js?v=<?= filemtime(__DIR__ . '/../js/report-handlers.js') ?>"></script>
 </body>
 </html>
