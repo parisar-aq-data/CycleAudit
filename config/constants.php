@@ -85,24 +85,6 @@ define('SCORE_BAD',       80);   // score ≤ 80 → Bad
 // ── Legacy alias ──────────────────────────────────────────────
 define('SCORE_MODERATE', 40);
 
-// ── Group B roads (Issue 11) ──────────────────────────────────
-// Roads with a fixed minimum score of 75 in the cyclist-slowed penalty.
-// Stored here so Parisar admins can update without touching scoring logic.
-// All names must be UPPERCASE — ScoreHelpers normalises before comparison.
-define('GROUP_B_ROADS', [
-    'DP ROAD',
-    'SINHAGAD ROAD',
-    'SENAPATI BAPAT ROAD',
-    'KARVE ROAD',
-    'FERGUSSON COLLEGE ROAD',
-    'JANGALI MAHARAJ ROAD',
-    'SANGAMWADI ROAD',
-    'PMC ROAD',
-    'KHADKI ROAD',
-    'DECCAN COLLEGE ROAD',
-    'PASHAN ROAD',
-]);
-
 // ── Pagination ────────────────────────────────────────────────
 define('PER_PAGE', 20);
 

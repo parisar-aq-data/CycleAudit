@@ -100,7 +100,7 @@ final = (safety x 1.00 + comfort x 1.25 + continuity x 1.50) / 3.75
 
 **Missing track.** If part of the segment has no cycle track, that length counts as 100 and the audited part is scored normally, weighted by length. If the whole segment is missing, every category is 100.
 
-**Cyclist slowed** uses a stricter scale on a configurable list of busy "Group B" roads (for example Karve Road and Sinhagad Road). The list lives in `config/constants.php`, so admins can change it without touching the scoring logic.
+**Cyclist slowed** uses one scale for every road: under 5 scores 0, 5 to 10 scores 50, 10 to 20 scores 75, and over 20 scores 100.
 
 **Condition bands**
 

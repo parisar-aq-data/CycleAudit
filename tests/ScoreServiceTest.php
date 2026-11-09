@@ -6,8 +6,8 @@ declare(strict_types=1);
 //  PHPUnit 10 — unit tests for services/ScoreService.php
 //
 //  Covers every penalty function, applyMissingLength,
-//  scoreToCondition, conditionColour, and the Group A/B
-//  edge cases in penaltyCyclistSlowed.
+//  scoreToCondition, conditionColour, and the
+//  band edges in penaltyCyclistSlowed.
 //
 //  Run:
 //    composer install
@@ -198,45 +198,30 @@ class ScoreServiceTest extends TestCase
         $this->assertSame(0.0, penaltySurface(null));
     }
 
-    // ── penaltyCyclistSlowed — Group A ─────────────────────────
+    // ── penaltyCyclistSlowed — one scale for every road ────────
 
-    public function test_cyclistSlowed_groupA_under5_returns_zero(): void
+    public function test_cyclistSlowed_under5_returns_zero(): void
     {
-        $this->assertSame(0.0, penaltyCyclistSlowed(0, 'BANER ROAD'));
-        $this->assertSame(0.0, penaltyCyclistSlowed(4.9, 'BANER ROAD'));
+        $this->assertSame(0.0, penaltyCyclistSlowed(0));
+        $this->assertSame(0.0, penaltyCyclistSlowed(4.9));
     }
 
-    public function test_cyclistSlowed_groupA_5to10_returns_50(): void
+    public function test_cyclistSlowed_5to10_returns_50(): void
     {
-        $this->assertSame(50.0, penaltyCyclistSlowed(5, 'BANER ROAD'));
-        $this->assertSame(50.0, penaltyCyclistSlowed(10, 'BANER ROAD'));
+        $this->assertSame(50.0, penaltyCyclistSlowed(5));
+        $this->assertSame(50.0, penaltyCyclistSlowed(10));
     }
 
-    public function test_cyclistSlowed_groupA_10to20_returns_75(): void
+    public function test_cyclistSlowed_10to20_returns_75(): void
     {
-        $this->assertSame(75.0, penaltyCyclistSlowed(11, 'BANER ROAD'));
-        $this->assertSame(75.0, penaltyCyclistSlowed(20, 'BANER ROAD'));
+        $this->assertSame(75.0, penaltyCyclistSlowed(11));
+        $this->assertSame(75.0, penaltyCyclistSlowed(20));
     }
 
-    public function test_cyclistSlowed_groupA_over20_returns_100(): void
+    public function test_cyclistSlowed_over20_returns_100(): void
     {
-        $this->assertSame(100.0, penaltyCyclistSlowed(21, 'BANER ROAD'));
-    }
-
-    // ── penaltyCyclistSlowed — Group B ─────────────────────────
-
-    public function test_cyclistSlowed_groupB_any_count_returns_75(): void
-    {
-        $this->assertSame(75.0, penaltyCyclistSlowed(0,  'PMC ROAD'));
-        $this->assertSame(75.0, penaltyCyclistSlowed(3,  'KARVE ROAD'));
-        $this->assertSame(75.0, penaltyCyclistSlowed(15, 'FERGUSSON COLLEGE ROAD'));
-        $this->assertSame(75.0, penaltyCyclistSlowed(20, 'SINHAGAD ROAD'));
-    }
-
-    public function test_cyclistSlowed_groupB_over20_returns_100(): void
-    {
-        $this->assertSame(100.0, penaltyCyclistSlowed(21, 'PMC ROAD'));
-        $this->assertSame(100.0, penaltyCyclistSlowed(50, 'DECCAN COLLEGE ROAD'));
+        $this->assertSame(100.0, penaltyCyclistSlowed(21));
+        $this->assertSame(100.0, penaltyCyclistSlowed(50));
     }
 
     // ── penaltyShade ───────────────────────────────────────────
