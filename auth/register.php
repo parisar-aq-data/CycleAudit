@@ -259,7 +259,7 @@ function ic(string $name): string
     <p class="pitch-sub rise" style="--i:3">Register as a surveyor and contribute to your city's cycle infrastructure dataset. Your field data drives Parisar's advocacy with municipal bodies.</p>
     <h3 class="steps-h rise" style="--i:4">What happens next</h3>
     <ol class="reg-steps">
-      <li class="rise" style="--i:5"><span class="stp-n">1</span><span><strong>Create your account</strong>It takes about a minute, and you are signed in straight away.</span></li>
+      <li class="rise" style="--i:5"><span class="stp-n">1</span><span><strong>Create your account</strong>It takes about a minute. Your City Leader then reviews your request, and you can sign in as soon as it is approved.</span></li>
       <li class="rise" style="--i:6"><span class="stp-n">2</span><span><strong>Join your city's audit team</strong>Surveyors work with their city's team. If your city is not on CycleAudit yet, a Parisar admin will place you.</span></li>
       <li class="rise" style="--i:7"><span class="stp-n">3</span><span><strong>Audit in the field</strong>Walk or ride a road, one segment at a time, and record what you find.</span></li>
       <li class="rise" style="--i:8"><span class="stp-n">4</span><span><strong>See it published</strong>Once an admin approves your audit, it appears on the CycleAudit home page.</span></li>
