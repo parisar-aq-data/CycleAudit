@@ -30,3 +30,6 @@ parisar_backup.sql
 .phpunit.result.cache
 
 .phpunit.result.cache
+
+# Automated tests are Python and must be tracked
+!tests/**/*.py

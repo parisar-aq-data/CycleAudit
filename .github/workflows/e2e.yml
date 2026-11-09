@@ -1,0 +1,77 @@
+name: End-to-end tests
+# Starts a throwaway copy of the app with an empty MySQL database and drives it over HTTP and with a
+# real browser (tests/e2e). It never touches production.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: HTTP security tests and browser flows
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: cycleaudit_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      MYSQLHOST: 127.0.0.1
+      MYSQLPORT: 3306
+      MYSQLDATABASE: cycleaudit_test
+      MYSQLUSER: root
+      MYSQLPASSWORD: root
+      BASE_URL: http://127.0.0.1:8080
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, mbstring, xml, gd, zip, intl
+          coverage: none
+
+      - name: Load the table definitions
+        # tests/e2e/schema.sql is a schema-only copy of the live database (no data).
+        # The numbered migrations alone cannot build an empty database.
+        run: mysql -h127.0.0.1 -uroot -proot cycleaudit_test < tests/e2e/schema.sql
+
+      - name: Start the app
+        run: |
+          php -S 127.0.0.1:8080 -t . > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/health.php > /dev/null; then echo "app is up"; exit 0; fi
+            sleep 1
+          done
+          echo "app did not start"; cat server.log; exit 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run the end-to-end tests
+        run: python -m pytest tests/e2e -v --tb=short
+
+      - name: Show the app log if something failed
+        if: failure()
+        run: cat server.log

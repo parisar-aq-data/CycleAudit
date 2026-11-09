@@ -1,0 +1,35 @@
+name: Live smoke test
+# Read-only checks of the LIVE site (tests/smoke/smoke.py). Creates no accounts and changes nothing.
+# Runs: after a deployment reports success to GitHub, every 6 hours, and on demand.
+on:
+  deployment_status:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Site to check'
+        required: false
+        default: 'https://cycleaudit.parisar.org'
+
+jobs:
+  smoke:
+    name: Check the live site
+    # For deployment events only act on successful ones.
+    if: github.event_name != 'deployment_status' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install requests
+        run: python -m pip install requests
+      - name: Give a fresh deployment a moment to start
+        if: github.event_name == 'deployment_status'
+        run: sleep 45
+      - name: Run the smoke test
+        run: python tests/smoke/smoke.py "${{ github.event.inputs.url || 'https://cycleaudit.parisar.org' }}"
