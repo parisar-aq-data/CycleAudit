@@ -72,16 +72,17 @@ Parisar audits the quality of cycling infrastructure across Pune. CycleAudit rep
 - Public landing page with live stats
 
 **Accounts and administration**
-- Email and password sign-up and sign-in, with an emailed one-time link to reset a forgotten password
+- Email and password sign-up. New accounts are **held for approval** by a City Leader or Admin before they can sign in
+- Password help: an emailed one-time reset link, a "forgot password" request that goes to the surveyor's team leader, and a **Reset password** button for Admins and City Leaders
 - Role-based access control: Admin, City Leader, Surveyor
-- Admin dashboard, road manager, surveyor manager (activate or deactivate accounts), activity log
+- Admin dashboard, road manager, surveyor manager (approve, activate or deactivate accounts), activity log
 - Excel exports of users and roads for admins
 
 **Operations**
 - IP and action based **rate limiting** with escalating lockouts
 - Activity logging for key user actions
 - `/health.php` endpoint for Railway health checks and uptime monitoring
-- Automated daily database backups to Backblaze B2
+- Automated daily database backups to Backblaze B2, owned by Parisar
 
 ## How scoring works
 
@@ -123,8 +124,8 @@ Road scores are **length-weighted** across their segments and are computed with 
 | Reports | mPDF (PDF), PhpSpreadsheet (Excel) |
 | Auth | PHP sessions, `password_hash` / `password_verify` |
 | Config | `vlucas/phpdotenv` for local `.env`, environment variables in production |
-| Testing | PHPUnit 10 |
-| CI | GitHub Actions (PHP lint + PHPUnit on PHP 8.3) |
+| Testing | PHPUnit 10, pytest + Playwright (end-to-end) |
+| CI | GitHub Actions (lint, PHPUnit, end-to-end tests, dependency scan, live smoke test) |
 | Container | Docker (Ubuntu 22.04, Apache 2, PHP 8.1) |
 | Hosting | Railway |
 | Backups | `mysqldump`, `rclone`, Backblaze B2 |
@@ -150,12 +151,14 @@ Parisar/
 ├── helpers/                 # Validator, StreakCalculator, ActivityLogger
 ├── js/                      # front-end modules (form-state, toast, loading-state, ...)
 ├── css/                     # stylesheets
-├── migrations/              # SQL migrations 000 to 008
+├── migrations/              # SQL migrations 000 to 032
 ├── tests/                   # PHPUnit suites
+│   ├── e2e/                 #   end-to-end tests (pytest, Playwright) and schema.sql
+│   └── smoke/               #   read-only checks of the live site
 ├── scripts/backup.sh        # database backup job
 ├── Dockerfile, docker-entrypoint.sh, railway.toml
 ├── health.php               # health check endpoint
-└── .github/workflows/       # CI
+└── .github/workflows/       # CI, security scan, smoke test
 ```
 
 The code follows a simple layering: **pages and API endpoints** handle HTTP, **repositories** run SQL, **services** hold business rules (scoring), and **config** provides guards and shared infrastructure.
@@ -182,9 +185,9 @@ Supporting tables: `login_attempts` and `activity_log` (migrations 001 and 002).
 | --- | --- | --- |
 | Admin | `admin` | Everything, across all cities |
 | City Leader | `city_leader` | Everything an Admin can, but only for resources in their own city |
-| Surveyor | `surveyor` | Create roads, audit any road, edit or delete only their own roads and segments |
+| Surveyor | `surveyor` | Audit the segments a City Leader assigns. Cannot create or delete roads |
 
-Permissions live in `config/permissions.php` and fail closed: an endpoint that forgets to pass a city context grants a City Leader nothing extra.
+Self-registered accounts start inactive and `pending`, and cannot sign in until a City Leader (or an Admin) approves them. Permissions live in `config/permissions.php` and fail closed: an endpoint that forgets to pass a city context grants a City Leader nothing extra.
 
 ## Local setup
 
@@ -192,8 +195,8 @@ Permissions live in `config/permissions.php` and fail closed: an endpoint that f
 
 ```bash
 # 1. Clone
-git clone https://github.com/NikhilWagh1018/Parisar.git
-cd Parisar
+git clone https://github.com/parisar-aq-data/CycleAudit.git
+cd CycleAudit
 
 # 2. Install PHP dependencies (including dev tools for tests)
 composer install
@@ -201,14 +204,13 @@ composer install
 # 3. Create the database
 mysql -u root -p -e "CREATE DATABASE parisar_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 4. Apply the schema, in order
-mysql -u root -p parisar_db < migrations/000_initial_schema.sql
-for f in migrations/00[1-8]*.sql; do mysql -u root -p parisar_db < "$f"; done
+# 4. Load the full table definitions (a schema-only copy of the live database)
+mysql -u root -p parisar_db < tests/e2e/schema.sql
 ```
 
-Then place the folder where your web server can serve it (for XAMPP, `C:\xampp\htdocs\Parisar`) and open `http://localhost/Parisar/`.
+Then place the folder where your web server can serve it (for XAMPP, `C:\xampp\htdocs\Parisar`) and open `http://localhost/Parisar/`. The folder name only matters for the URL, so a clone named `CycleAudit` works too if you adjust `BASE_URL`.
 
-> **Heads up:** see [Known gaps](#known-gaps-and-roadmap). The migrations do not yet create every table and column the code uses, so a fresh install from migrations alone will be incomplete.
+> **Why not the migrations?** `migrations/` is the history of changes to the live database, applied by hand in Railway's query box. It does not yet create every table, so a fresh install should start from `tests/e2e/schema.sql`. See [Known gaps](#known-gaps-and-roadmap).
 
 ## Configuration
 
@@ -237,7 +239,17 @@ The `MYSQL*` names are the ones Railway injects, so the same code runs locally a
 composer test          # runs phpunit --testdox
 ```
 
-There are 139 test methods across 7 suites, covering the scoring engine and its helpers, segment repository, input validation, and front-end form-state and toast logic. GitHub Actions runs a PHP syntax lint over every `.php` file and the full PHPUnit suite on each push and pull request to `main`.
+There are more than 580 PHPUnit test methods across 47 files. They cover scoring, validation, roles and city scoping, approvals, password reset, audit review and reports, and the front-end form logic. The end-to-end suite in `tests/e2e/` starts from an empty throwaway database and drives a running copy of the app over HTTP and in Chromium. Its own guide is `tests/e2e/README.md`.
+
+| Workflow | When it runs | What it checks |
+| --- | --- | --- |
+| **CI / CD** (`deploy.yml`) | every push and pull request to `main` | PHP lint, PHPUnit, dependency audit |
+| **End-to-end tests** (`e2e.yml`) | every pull request | sign-up and approval, sessions and passwords, access control, sign-in page security headers |
+| **Security scan** (`security-scan.yml`) | weekly (Monday 03:23 UTC) | known vulnerabilities in PHP libraries |
+| **Live smoke test** (`smoke.yml`) | every 6 hours and after each deploy | the live site responds |
+| **Docker permissions** | when the Docker setup changes | the web server cannot modify the code |
+
+Dependabot (`.github/dependabot.yml`) opens pull requests for outdated libraries.
 
 ## Deployment
 
@@ -247,25 +259,31 @@ CycleAudit is containerised and runs on **Railway**, with a managed MySQL servic
 - `docker-entrypoint.sh` reads Railway's `PORT` and points Apache at it.
 - `railway.toml` selects the Dockerfile builder and restarts on failure (up to 3 times).
 - `health.php` returns `200` when the database responds and `503` when it does not.
+- `.htaccess` returns 403 for server-side folders and project files (`config/`, `migrations/`, `scripts/`, `composer.lock`, `Dockerfile` and similar), because the Docker image copies the whole project into the web folder.
 - Sessions are HTTPS-aware behind the proxy (`X-Forwarded-Proto`), and rate limiting reads the real visitor IP from `X-Forwarded-For`, but only when the request really comes from Railway's proxy range.
 
 **To deploy your own copy:**
 
 1. Create a Railway project, add a MySQL service, and connect this repository.
 2. Set `BASE_URL` on the web service.
-3. Run the SQL migrations against the Railway MySQL instance.
+3. Load `tests/e2e/schema.sql` into the Railway MySQL instance, then run any later migration by hand, one statement per query.
 4. Point a health check at `/health.php`.
 
 ## Backups
 
-A separate `backup-cron` Railway service runs `scripts/backup.sh` daily at 02:00 UTC: `mysqldump`, then `gzip`, then upload to a private Backblaze B2 bucket with `rclone`. Files older than `RETENTION_DAYS` (default 7) are pruned. Full setup, verification and restore steps are in [BACKUPS.md](./BACKUPS.md).
+A separate `backup-cron` Railway service runs `scripts/backup.sh` daily at 02:00 UTC (07:30 IST): `mysqldump`, then `gzip`, then upload to a private bucket in **Parisar's own Backblaze B2 account** with `rclone`. Files older than `RETENTION_DAYS` (default 7) are pruned. Full setup, verification and restore steps are in [BACKUPS.md](./BACKUPS.md).
 
 ## Security notes
 
+The full list, with how to report a problem, is in [SECURITY.md](./SECURITY.md). In short:
+
 - All SQL uses PDO prepared statements with emulation off
-- Secure session bootstrap: `HttpOnly`, `SameSite=Lax`, `Secure` when on HTTPS, strict mode, 8 hour lifetime
+- Secure sessions: `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, strict mode, 8 hour lifetime. Changing a password ends the user's other sessions
+- Content-Security-Policy on every HTML page: scripts run only from this site or with a fresh per-request nonce, and inline `<script>` and inline event handlers are not allowed
+- Browser hardening headers (`nosniff`, frame protection, referrer policy, permissions policy, HSTS)
 - Login and registration are rate limited per IP and action (5 failures in 15 minutes triggers a 15 minute lock that doubles on repeat, capped at 24 hours)
-- Guards re-check the user's role and active status from the database on every request, not just from the session
+- CSRF protection on write requests; sign-in responses do not reveal whether an account exists
+- New accounts need approval, and guards re-check the user's role, active status and approval from the database on every request
 - Errors are logged server-side and never shown to the browser
 - Public identifiers hide internal IDs
 
@@ -274,8 +292,11 @@ Found a vulnerability? Please open a private security advisory on GitHub rather 
 ## Known gaps and roadmap
 
 **Known gaps**
-- [ ] **Migrations lag behind the code.** The code uses tables and columns that no migration creates: `cities`, `road_groups`, `audit_log`, `rate_limit_attempts`, `users.city_id`, `users.is_active`, the `admin` and `city_leader` roles, and `segment_audits.cycle_track_missing` / `missing_length`. Production has them; a fresh install does not. A consolidating migration is the next fix.
+- [ ] **Migrations lag behind the code.** No migration creates `cities`, `road_groups`, `audit_log` or `rate_limit_attempts`, and several columns exist only in production. `tests/e2e/schema.sql` is the complete, current picture, so use it for fresh installs. A consolidating migration is still to do.
 - [ ] Profile pictures are stored as base64 in MySQL because Railway's filesystem is ephemeral. Object storage would be better.
+- [ ] `style-src` still allows `'unsafe-inline'` because pages use inline `style` attributes. Removing it is a larger clean-up.
+- [ ] `index.html` (the public landing page) still has a few inline handlers. It sends no policy header, so nothing breaks, but it would need tidying before one is added.
+- [ ] The minimum password length is 8 characters. Raising it to 10 is under consideration.
 
 **Roadmap**
 - [ ] Image upload for audits

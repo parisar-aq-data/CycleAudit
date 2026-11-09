@@ -6,22 +6,23 @@ and uploaded to a private Backblaze B2 bucket.
 
 ## Overview
 
-- **Schedule:** Daily at 02:00 AM UTC (Railway cron)
+- **Schedule:** Daily at 02:00 AM UTC, which is 07:30 AM IST (Railway cron)
 - **Pipeline:** `mysqldump` → `gzip` → `rclone` upload → Backblaze B2
-- **Storage:** Backblaze B2 bucket `cycleaudit-backups` (private, SSE-B2 encryption at rest)
+- **Storage:** a private Backblaze B2 bucket in Parisar's own Backblaze account (currently `parisar-cycleaudit-backups`, US East), with SSE-B2 encryption at rest
 - **Retention:** 7 days (see `RETENTION_DAYS` below)
 - **Script:** `scripts/backup.sh`
 
 ## Backblaze B2 setup
 
-1. **Create a B2 account** (or use an existing one) at [backblaze.com/b2](https://www.backblaze.com/b2/cloud-storage.html).
+1. **Use Parisar's B2 account**, not a personal one, so the backups stay with the organisation. Create one at [backblaze.com/b2](https://www.backblaze.com/b2/cloud-storage.html) if needed. Turn on two-factor sign-in, and keep the login with a senior Parisar person.
 2. **Create a bucket:**
-   - Name: `cycleaudit-backups` (or your own — must be globally unique)
+   - Name: `parisar-cycleaudit-backups` (or your own — must be globally unique)
    - Files in bucket: **Private**
    - Default encryption: **SSE-B2** (server-side encryption)
+   - Lifecycle: keep only the last version of each file, with hidden versions deleted after 10 days, so deleted backups do not pile up
 3. **Create an application key:**
    - Go to **App Keys** → **Add a New Application Key**
-   - Restrict it to the `cycleaudit-backups` bucket if possible
+   - Restrict it to the backup bucket if possible
    - Save the **keyID** and **applicationKey** shown — the applicationKey is
      only displayed once
 4. **Note your endpoint.** B2's S3-compatible endpoint format is:
@@ -40,7 +41,7 @@ whitespace — see the gotcha note below for why that matters.
 
 ```env
 BACKUP_S3_ACCESS_KEY="<B2 keyID>"
-BACKUP_S3_BUCKET="cycleaudit-backups"
+BACKUP_S3_BUCKET="parisar-cycleaudit-backups"
 BACKUP_S3_ENDPOINT="https://s3.us-east-005.backblazeb2.com"
 BACKUP_S3_SECRET_KEY="<B2 applicationKey>"
 DB_HOST="${{MySQL.MYSQLHOST}}"
@@ -70,15 +71,25 @@ A successful run looks like this in Railway's Deploy Logs:
 ```
 [... ] Starting backup for database 'railway'...
 [... ] Dump complete: /tmp/cycleaudit_<timestamp>.sql.gz (1.1M)
-[... ] Uploaded to backupstore:cycleaudit-backups/cycleaudit_<timestamp>.sql.gz
+[... ] Uploaded to backupstore:parisar-cycleaudit-backups/cycleaudit_<timestamp>.sql.gz
 [... ] Backup job finished successfully.
 ```
+
+## Changing where backups are stored
+
+If the bucket or Backblaze account changes, do it in this order so there is never a gap:
+
+1. Create the new bucket and a new application key restricted to it.
+2. Update the `BACKUP_S3_*` variables on the `backup-cron` service in Railway.
+3. Click **Run now** and confirm a new file appears in the new bucket.
+4. After the next scheduled run has also landed a file, delete the old key and the old bucket.
+5. Update the bucket name in this file and in `env.example`.
 
 ## Verifying a backup
 
 Check the Backblaze B2 dashboard directly:
 
-- Bucket → file list should show a recently uploaded `cycleaudit_*.sql.gz`
+- Bucket → file list should show a recently uploaded `cycleaudit_*.sql.gz` from the last day or so (one per day, up to `RETENTION_DAYS`)
 - Encryption column should read **AES256 (SSE-B2)**
 - Bucket should remain **Private**
 
