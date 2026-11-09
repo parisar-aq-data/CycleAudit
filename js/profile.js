@@ -213,3 +213,21 @@ function uploadAvatar(input) {
   };
   reader.readAsDataURL(file);
 }
+
+/* H6: profile page event handlers */
+(function () {
+    var actions = {
+        'pick-avatar':     ['click',  function () { document.getElementById('avatar-file').click(); }],
+        'upload-avatar':   ['change', function (e) { uploadAvatar(e.currentTarget); }],
+        'sanitize-phone':  ['input',  function (e) { sanitizePhoneInput(e.currentTarget); }],
+        'save-profile':    ['click',  function () { saveProfile(); }],
+        'reset-profile':   ['click',  function () { loadProfile(); }],
+        'update-email':    ['click',  function () { updateEmail(); }],
+        'check-strength':  ['input',  function (e) { checkStrength(e.currentTarget.value); }],
+        'change-password': ['click',  function () { changePassword(); }]
+    };
+    document.querySelectorAll('[data-profile-action]').forEach(function (el) {
+        var a = actions[el.getAttribute('data-profile-action')];
+        if (a) { el.addEventListener(a[0], a[1]); }
+    });
+})();
