@@ -130,3 +130,21 @@ def test_dashboard_and_report_labels_have_handlers():
         assert labels, f"no {attr} labels found in {php}"
         missing = sorted(n for n in labels if n not in code)
         assert not missing, f"labels with no handler in {js}: {missing}"
+
+# --- sign-in pages nonce ---
+def test_auth_inline_scripts_have_a_nonce():
+    bare = []
+    for rel in ("auth", "auth/partials"):
+        for p in sorted((ROOT / rel).glob("*.php")):
+            text = p.read_text(encoding="utf-8")
+            for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>", text):
+                if "nonce=" not in m.group(0):
+                    bare.append(f"{p.relative_to(ROOT)}: {m.group(0)}")
+    assert not bare, "inline <script> blocks without a nonce:\n" + "\n".join(bare)
+
+
+def test_send_csp_header_creates_a_nonce():
+    text = (ROOT / "config/constants.php").read_text(encoding="utf-8")
+    body = text[text.index("function sendCspHeader"):]
+    body = body[:body.index("function ", 10)] if "function " in body[10:] else body
+    assert "csp_nonce" in body, "sendCspHeader() must create $_SESSION['csp_nonce'] for pages that do not use auth_guard"

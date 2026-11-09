@@ -238,7 +238,7 @@ function ic(string $name): string
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/login.css?v=<?= filemtime(__DIR__ . '/../css/login.css') ?>">
 <link rel="stylesheet" href="../css/register.css?v=<?= filemtime(__DIR__ . '/../css/register.css') ?>">
-<script>document.documentElement.classList.add('js')</script>
+<script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">document.documentElement.classList.add('js')</script>
 </head>
 <body class="login reg">
 
@@ -424,6 +424,6 @@ function ic(string $name): string
 <script src="../js/location_fields.js"></script>
 <script src="../js/auth_simple.js?v=<?= filemtime(__DIR__ . '/../js/auth_simple.js') ?>"></script>
 <script src="../js/register.js?v=<?= filemtime(__DIR__ . '/../js/register.js') ?>"></script>
-<script>initLocationFields('inp-city', 'inp-state');</script>
+<script nonce="<?= htmlspecialchars($_SESSION['csp_nonce'] ?? '', ENT_QUOTES, 'UTF-8') ?>">initLocationFields('inp-city', 'inp-state');</script>
 </body>
 </html>
