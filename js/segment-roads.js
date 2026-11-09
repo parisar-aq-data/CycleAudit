@@ -80,7 +80,7 @@ function roadRenderDropdown(q) {
 
   // ── Pinned: Other / Custom — admin only, always at top ──
   if (window.IS_ADMIN) {
-    html += `<div class="road-dropdown-item pinned" onclick="roadSelectCustom()">
+    html += `<div class="road-dropdown-item pinned" data-segment-dyn="road-select-custom">
       <span>✦</span> Other / Custom Road…
     </div>`;
   }

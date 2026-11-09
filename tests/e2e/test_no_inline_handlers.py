@@ -39,3 +39,25 @@ def test_every_label_has_a_handler(page, label, js):
     assert names, f"no {label} labels found in {page}"
     missing = sorted(n for n in names if f"'{n}'" not in code)
     assert not missing, f"{page} uses {label} values with no handler in {js}: {missing}"
+
+# --- JavaScript-built markup (segment page) ---
+JS_CONVERTED = ["js/segment.js", "js/segment-roads.js"]
+JS_INLINE = re.compile(r"\son(click|change|input|focus|blur|keydown|keyup|submit)\s*=\s*[^a-zA-Z\s]")
+
+
+@pytest.mark.parametrize("path", JS_CONVERTED)
+def test_converted_script_builds_no_inline_handlers(path):
+    text = (ROOT / path).read_text(encoding="utf-8")
+    hits = [f"line {n}: {line.strip()[:90]}"
+            for n, line in enumerate(text.splitlines(), 1) if JS_INLINE.search(line)]
+    assert not hits, f"{path} builds inline event handlers again:\n" + "\n".join(hits)
+
+
+def test_every_segment_dyn_label_has_a_handler():
+    code = (ROOT / "js/segment-handlers.js").read_text(encoding="utf-8")
+    names = set()
+    for path in JS_CONVERTED:
+        names |= set(re.findall(r'data-segment-dyn="([\w-]+)"', (ROOT / path).read_text(encoding="utf-8")))
+    assert names, "no data-segment-dyn labels found"
+    missing = sorted(n for n in names if f"'{n}'" not in code)
+    assert not missing, f"data-segment-dyn values with no handler in js/segment-handlers.js: {missing}"
