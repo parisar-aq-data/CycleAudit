@@ -96,6 +96,7 @@ document.addEventListener('click', e => {
 
   <div style="padding: 0 4px 4px;">
     <div class="card">
+      <div id="pendingBanner" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:.88rem;font-weight:500;"></div>
       <div class="surv-filterbar">
         <input type="text" id="survSearch" class="surv-search" placeholder="Search by name or email…">
         <select id="roleFilter" class="surv-role-filter">
@@ -109,6 +110,7 @@ document.addEventListener('click', e => {
         </select>
         <select id="statusFilter" class="surv-role-filter" aria-label="Filter by status">
           <option value="active" selected>Active users</option>
+          <option value="pending">Waiting for approval</option>
           <option value="inactive">Inactive users</option>
           <option value="all">All users</option>
         </select>
@@ -221,7 +223,7 @@ document.addEventListener('click', e => {
     }
     // City Leaders may only (de)activate surveyors; the API enforces this.
     var toggleBtn = (!locked && (IS_NATIONAL_ADMIN || s.role === 'surveyor'))
-      ? '<button class="toggle-status-btn" data-id="' + s.id + '" data-active="' + (s.removal_pending ? 'false' : s.is_active) + '" data-pending="' + (s.removal_pending ? '1' : '') + '">' + (s.removal_pending ? 'Cancel removal' : (s.is_active ? 'Deactivate' : 'Reactivate')) + '</button>'
+      ? '<button class="toggle-status-btn" data-id="' + s.id + '" data-active="' + (s.removal_pending ? 'false' : s.is_active) + '" data-pending="' + (s.removal_pending ? '1' : '') + '">' + (s.removal_pending ? 'Cancel removal' : (s.is_active ? 'Deactivate' : (s.approval_status === 'pending' ? 'Approve' : 'Reactivate'))) + '</button>'
       : '';
     // Reset password: Admin on anyone but themselves, City Leader on surveyors.
     // The API enforces this too, and refuses deactivated accounts (reactivate first).
@@ -232,7 +234,7 @@ document.addEventListener('click', e => {
       '<td><div class="surv-name-cell">' +
         '<div class="surv-avatar">' + escapeHtml(initials(s.name)) + '</div>' +
         '<div><div class="surv-name">' + escapeHtml(s.name) + '</div>' +
-        '<div class="surv-email">' + escapeHtml(s.email) + '</div></div>' +
+        '<div class="surv-email">' + escapeHtml(s.email) + '</div>' + (s.approval_status === 'pending' ? '<div style="font-size:.72rem;font-weight:700;color:#b45309;">WAITING FOR APPROVAL</div>' : '') + '</div>' +
       '</div></td>' +
       '<td>' + (s.organisation ? escapeHtml(s.organisation) : '<span class="surv-muted">—</span>') + '</td>' +
       '<td>' + roleBadge + '</td>' +
@@ -255,12 +257,31 @@ document.addEventListener('click', e => {
 
   var lastFiltered = [];
 
+  // Banner: who is waiting for approval (sign-ups are inactive until approved).
+  function updatePendingBanner() {
+    var n = allSurveyors.filter(function (s) { return s.approval_status === 'pending'; }).length;
+    var b = document.getElementById('pendingBanner');
+    if (!b) return;
+    if (n === 0) { b.style.display = 'none'; return; }
+    b.innerHTML = n + (n === 1 ? ' person is' : ' people are') + ' waiting for approval. ' +
+      '<a href="#" id="pendingReview" style="color:inherit;text-decoration:underline;">Show them</a>';
+    b.style.display = 'block';
+  }
+  document.getElementById('pendingBanner').addEventListener('click', function (e) {
+    if (e.target.id === 'pendingReview') {
+      e.preventDefault();
+      document.getElementById('statusFilter').value = 'pending';
+      applyFilter();
+    }
+  });
+
   function applyFilter() {
     var q = document.getElementById('survSearch').value.trim().toLowerCase();
     var statusFilter = document.getElementById('statusFilter').value;
     var roleFilter = document.getElementById('roleFilter').value;
     var cityFilter = document.getElementById('cityFilter').value;
     var filtered = allSurveyors.filter(function (s) {
+      if (statusFilter === 'pending' && s.approval_status !== 'pending') return false;
       if (statusFilter === 'active' && !s.is_active) return false;
       if (statusFilter === 'inactive' && s.is_active) return false;
       if (roleFilter !== 'all' && s.role !== roleFilter) return false;
@@ -270,6 +291,7 @@ document.addEventListener('click', e => {
              (s.email || '').toLowerCase().indexOf(q) !== -1;
     });
     lastFiltered = filtered;
+    updatePendingBanner();
     render(filtered);
     document.getElementById('filterCount').textContent =
       'Showing ' + filtered.length + ' of ' + allSurveyors.length + ' users';
@@ -360,8 +382,10 @@ document.addEventListener('click', e => {
       var id = parseInt(e.target.dataset.id, 10);
       var newActive = e.target.dataset.active !== 'true';
       var wasPending = e.target.dataset.pending === '1';
+      var rowUser = allSurveyors.find(function (x) { return x.id === id; });
+      var isApproval = !!rowUser && rowUser.approval_status === 'pending' && newActive;
       if (!confirm(wasPending ? 'Cancel the removal? They stay active.'
-          : (newActive ? 'Reactivate this user?' : 'Deactivate this user? Segments they have not started go back to unassigned. If they have segments in progress they finish those first, then are deactivated.'))) return;
+          : (newActive ? (isApproval ? 'Approve this person? Check their name, organisation and phone number first. They can sign in straight away.' : 'Reactivate this user?') : 'Deactivate this user? Segments they have not started go back to unassigned. If they have segments in progress they finish those first, then are deactivated.'))) return;
       fetch('../api/admin/surveyors.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
@@ -373,7 +397,7 @@ document.addEventListener('click', e => {
         var s = allSurveyors.find(function (x) { return x.id === id; });
         if (s) {
           if (data.mode === 'wait') { s.removal_pending = true; }
-          else { s.removal_pending = false; s.is_active = newActive; }
+          else { s.removal_pending = false; s.is_active = newActive; if (newActive) { s.approval_status = 'approved'; } }
         }
         if (data.message) alert(data.message);
         applyFilter();
