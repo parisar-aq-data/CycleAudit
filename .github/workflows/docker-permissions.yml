@@ -1,0 +1,38 @@
+name: Docker permissions
+# Builds the real production image and checks that the web server user cannot change the code,
+# but can write where the app needs to (logs, reports). Runs only when the Docker setup changes.
+on:
+  pull_request:
+    paths: ['Dockerfile', 'docker-entrypoint.sh', '.dockerignore', '.github/workflows/docker-permissions.yml']
+  workflow_dispatch:
+
+jobs:
+  permissions:
+    name: Web server cannot modify the code
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the production image
+        run: docker build -t cycleaudit-image .
+
+      - name: Check file permissions as the web server user
+        run: |
+          docker run --rm --entrypoint bash cycleaudit-image -c '
+            set -u
+            as_web() { su -s /bin/bash www-data -c "$1"; }
+            fail=0
+            for f in /var/www/html/config/constants.php /var/www/html/index.php /var/www/html/auth/login.php; do
+              [ -e "$f" ] || continue
+              if as_web "test -w $f"; then echo "FAIL: web server can write $f"; fail=1; else echo "PASS: $f is read-only"; fi
+            done
+            if as_web "touch /var/www/html/config/should_not_work" 2>/dev/null; then echo "FAIL: web server can create files in config/"; fail=1; else echo "PASS: cannot create files in config/"; fi
+            if as_web "touch /var/www/html/should_not_work" 2>/dev/null; then echo "FAIL: web server can create files in the app root"; fail=1; else echo "PASS: cannot create files in the app root"; fi
+            for d in logs reports; do
+              if as_web "touch /var/www/html/$d/ok.tmp && rm /var/www/html/$d/ok.tmp"; then echo "PASS: $d/ is writable"; else echo "FAIL: $d/ is not writable"; fail=1; fi
+            done
+            as_web "test -r /var/www/html/config/constants.php" && echo "PASS: code is readable" || { echo "FAIL: code is not readable"; fail=1; }
+            exit $fail
+          '

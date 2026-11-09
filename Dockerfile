@@ -50,9 +50,12 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf \
     && echo "ServerTokens Prod"    >> /etc/apache2/apache2.conf \
     && echo "ServerSignature Off"  >> /etc/apache2/apache2.conf \
-    && chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && chmod -R 775 /var/www/html/assets \
+    && chown -R root:root /var/www/html \
+    && find /var/www/html -type d -exec chmod 755 {} + \
+    && find /var/www/html -type f -exec chmod 644 {} + \
+    && mkdir -p /var/www/html/logs /var/www/html/reports \
+    && chown www-data:www-data /var/www/html/logs /var/www/html/reports \
+    && chmod 775 /var/www/html/logs /var/www/html/reports \
     && mkdir -p /var/log/apache2 \
     && touch /var/log/apache2/error.log \
     && touch /var/log/apache2/access.log \
