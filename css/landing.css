@@ -378,3 +378,14 @@ a.collab-card:hover .collab-logo img,a.collab-card:focus-visible .collab-logo im
 a.collab-card:hover .collab-visit span,a.collab-card:focus-visible .collab-visit span{transform:translate(2px,-2px)}
 @media(max-width:640px){.collab-grid{gap:12px}.collab-card{flex-basis:calc(50% - 6px);padding:12px 10px 14px}.collab-logo{--dia:96px}.collab-mark{font-size:1.8rem}.collab-name{font-size:.9rem}.collab-role{padding:3px 8px;font-size:.6rem;letter-spacing:.03em;white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){.collab-card{opacity:1;transition:none}.collab-logo img{transition:none}.collab-card.vs{animation:none}a.collab-card:hover{transform:none}.collab-visit span{transition:none}}
+
+/* Phones. Two desktop rules defined further up (.ag and .cg) came later than the mobile rules
+   that were meant to change them, so they won and the About block never stacked and the city
+   tiles stayed narrow on the left. These rules sit last so they apply. */
+@media(max-width:768px){
+  .ag{grid-template-columns:1fr;gap:28px}
+}
+@media(max-width:640px){
+  .cg{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .rs-key{flex-wrap:wrap;row-gap:4px}
+}
