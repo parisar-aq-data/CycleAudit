@@ -88,6 +88,10 @@ if BASE.startswith("https://"):
         check(f"{path} sends a Content-Security-Policy", bool(csp), "missing" if not csp else "")
         check(f"{path} script-src does not allow 'unsafe-inline'", bool(script) and "'unsafe-inline'" not in script,
               script or "no script-src")
+    r, _ = get("/")
+    elem = directive(r.headers.get("Content-Security-Policy", ""), "style-src-elem")
+    check("landing page: <style> blocks are blocked", bool(elem) and "'unsafe-inline'" not in elem,
+          elem or "no style-src-elem")
     r, _ = get("/auth/login.php")
     elem = directive(r.headers.get("Content-Security-Policy", ""), "style-src-elem")
     check("sign-in page: <style> blocks need the nonce", "'nonce-" in elem and "'unsafe-inline'" not in elem,
