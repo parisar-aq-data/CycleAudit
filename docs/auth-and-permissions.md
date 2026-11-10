@@ -169,6 +169,8 @@ The register and login forms do not carry a CSRF token. They are protected by th
 
 ### 6.2 Sign-in (`auth/login.php`)
 
+**Sign-in is by email and password only.** Google sign-in (OAuth) was removed so that every account is one Parisar controls. There is no "Sign in with Google" button, no `auth/google_callback.php`, no `config/google_config.php`, and no `GOOGLE_*` settings. `tests/NoGoogleLoginTest.php` fails if any of those come back. (The `users.google_id` and `users.auth_provider` columns and the `oauth_states` table still exist in the database but are unused; see the database chapter.) The Google addresses in the Content-Security-Policy below, `fonts.googleapis.com` and `fonts.gstatic.com`, are for Google Fonts only and have nothing to do with sign-in.
+
 1. Rate-limit check for `(ip, 'login')`.
 2. Look up the user by email, then run `password_verify` **even for an unknown email** (against a fixed dummy hash) so the response time is similar either way.
 3. Wrong password or unknown email: record a failure and show the same generic "Invalid email or password" message, plus a remaining-attempts hint when 2 or fewer are left. Both cases are logged with reason `wrong_password` or `unknown_email`.
@@ -256,6 +258,7 @@ Other browser hardening headers (HSTS, frame protection, `nosniff`, referrer and
 - The lockout doubling to 24 hours looks unreachable by reading the code (section 5); confirm on a test database before relying on it.
 - CSRF is checked endpoint by endpoint, so a new write endpoint that forgets the check is unprotected.
 - Six permission names in `config/permissions.php` are never checked by `can()` or `gate()` (section 2).
+- `tests/NoGoogleLoginTest.php`, which guards the removal of Google sign-in, is not listed in `phpunit.xml`, so CI does not run it. Run it by hand with `vendor/bin/phpunit tests/NoGoogleLoginTest.php`, or add it to the `Unit` suite.
 - The session-timeout redirect assumes the app is at the web root (section 4).
 - The login and register forms have no CSRF token.
 - Some comments still use the pre-018 role names `national_admin` and `city_admin`.

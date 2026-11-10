@@ -25,7 +25,7 @@ These tables exist in `tests/e2e/schema.sql` but no file in `migrations/` contai
 | `road_groups` | Migration 009 says it "predates migration tracking"; 009 and 010 only alter it. |
 | `audit_log` | Written by `api/admin/roads.php`; read by the activity log screen. |
 | `rate_limit_attempts` | Used by `config/rate_limit.php`. |
-| `oauth_states` | No PHP code reads or writes it (see section 6). |
+| `oauth_states` | Leftover from Google sign-in, which has been removed. No PHP code reads or writes it (see section 6). |
 | `road_assignments` | No PHP code reads or writes it (see section 6). |
 
 Tables that migrations create: `users`, `roads`, `segments`, `audit_sessions`, `segment_audits`, `obstructions`, `intersections` (all in `000_initial_schema.sql`), `login_attempts` (001), `activity_log` (002), `city_audits` (011), `segment_assignments` (012), `notifications` (017), `password_resets` (019), `past_audits` (024), `password_requests` (026), `collaborators` (028).
@@ -118,7 +118,7 @@ An account. Primary key `id`; unique `email`, unique `public_id` is not defined 
 | `public_id` | varchar(20), `''` | `USR-NNNN` |
 | `name`, `email` | varchar | Email is unique (`uq_users_email`). |
 | `phone`, `organisation`, `gender`, `age`, `address` | nullable | Profile fields. `gender` enum Male, Female, Other. |
-| `password` | varchar(255), nullable | `password_hash` output. |
+| `password` | varchar(255), nullable | `password_hash` output. The original schema allowed NULL for "OAuth-only accounts" (column comment in migration 000). Google sign-in has since been removed; the only code that creates accounts, `auth/register.php`, always stores a hash. |
 | `must_change_password` | tinyint, 0 | Set by temporary-password flows; forces a change at next sign-in (migration 022). |
 | `password_changed_at` | datetime | Used to end other sessions after a change. |
 | `role` | enum `surveyor`, `city_leader`, `admin`; default `surveyor` | See section 5. |
@@ -126,7 +126,8 @@ An account. Primary key `id`; unique `email`, unique `public_id` is not defined 
 | `team_leader_id` | int, nullable | The City Leader whose team this surveyor is in (migration 027). |
 | `is_active` | tinyint, 1 | Inactive accounts cannot sign in. |
 | `approval_status` | varchar(10), `approved` | `pending`, `approved`, `rejected` (migration 032). |
-| `auth_provider`, `google_id`, `email_verified` | enum local/google, varchar, tinyint | Google sign-in columns. Code only ever inserts `local`; no PHP reads `google_id` (grep). |
+| `auth_provider`, `google_id` | enum local/google, varchar | Leftovers from the removed Google sign-in. `auth/register.php` always inserts `local`; no PHP or JS reads either column (grep). Sign-in is by email and password only. |
+| `email_verified` | tinyint, 0 | Not a Google column. `js/profile.js` shows a verified state from it, and `api/user/profile.php` resets it to 0 when the email changes. Nothing in the application ever sets it to 1 (only the end-to-end seed script does), so accounts created through the application show as unverified (older rows in the live database may differ; the code cannot show that). |
 | `profile_picture` | longtext | Base64 image stored in the database (Railway's disk is ephemeral). |
 | `last_login`, `created_at`, `updated_at` | datetime | |
 | `home_city`, `home_state` | varchar(100) | Free-text home location (migration 020). |
@@ -293,7 +294,7 @@ Partner organisations shown on the landing page: `name`, `role_label`, `website_
 
 ### 4.18 `oauth_states`
 
-`state` (unique), `created_at`. Intended for a Google sign-in handshake. No PHP code uses it.
+`state` (unique), `created_at`. It was meant for the Google sign-in handshake. Google sign-in has been removed from the application and `tests/NoGoogleLoginTest.php` is there to keep it removed. No PHP code uses this table.
 
 ## 5. Status and enum values
 
@@ -345,7 +346,7 @@ Submitting is allowed from `assigned` and `needs_revisit` (`SURVEYOR_SUBMITTABLE
 
 - `oauth_states`, `road_assignments`: no references in PHP, JS or tests.
 - `login_attempts`: created by migration 001, absent from `schema.sql`, no references in PHP.
-- `users.google_id`, `users.auth_provider = 'google'`: no code path produces or reads Google accounts.
+- `users.google_id`, `users.auth_provider`: left over from the removed Google sign-in. No code path produces or reads Google accounts. They can be dropped in a future migration, after a backup (section 7).
 - `segments.status = 'in_progress'`: never written.
 - `road_groups.assigned_*`: whether any current screen writes them was not verified.
 
