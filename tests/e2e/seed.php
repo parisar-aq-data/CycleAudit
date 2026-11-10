@@ -30,7 +30,7 @@ $pdo = new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4", $user
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 
-const TEST_PASSWORD = 'Test@12345';
+const TEST_PASSWORD = 'Test@12345678';
 
 $cmd = $argv[1] ?? '';
 

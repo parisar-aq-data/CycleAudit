@@ -112,4 +112,6 @@ def test_bad_sign_up_details_are_refused(anon):
     assert "request has been sent" not in r.text
     r = register(anon, password="onlyletters")
     assert "request has been sent" not in r.text
+    r = register(anon, password="Abcdefgh123")  # letters and numbers, but only 11 characters
+    assert "request has been sent" not in r.text
     assert db_user(NEW) is None

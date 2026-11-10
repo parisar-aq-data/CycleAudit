@@ -8,6 +8,12 @@ window.addEventListener('scroll', () => {
   document.getElementById('topBtn').classList.toggle('show', scrollY > 300);
 });
 
+// Back-to-top button (was an inline onclick, which the page policy does not allow)
+const topBtn = document.getElementById('topBtn');
+if (topBtn) {
+  topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
 // Hamburger menu toggle
 const ham = document.getElementById('ham');
 const nl = document.getElementById('nl');

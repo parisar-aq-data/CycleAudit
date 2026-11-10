@@ -35,11 +35,11 @@ class PasswordResetTest extends TestCase
 
     public function test_password_rules_match_sign_up(): void
     {
-        $this->assertSame('Password must be at least 8 characters.', passwordRuleError('abc12', 'abc12'));
-        $this->assertSame('Password must contain at least one letter and one number.', passwordRuleError('abcdefgh', 'abcdefgh'));
-        $this->assertSame('Password must contain at least one letter and one number.', passwordRuleError('12345678', '12345678'));
-        $this->assertSame('Passwords do not match.', passwordRuleError('abcdefg1', 'abcdefg2'));
-        $this->assertNull(passwordRuleError('abcdefg1', 'abcdefg1'));
+        $this->assertSame('Password must be at least 12 characters.', passwordRuleError('abc12', 'abc12'));
+        $this->assertSame('Password must contain at least one letter and one number.', passwordRuleError('abcdefghijkl', 'abcdefghijkl'));
+        $this->assertSame('Password must contain at least one letter and one number.', passwordRuleError('123456789012', '123456789012'));
+        $this->assertSame('Passwords do not match.', passwordRuleError('abcdefghij1k', 'abcdefghij1m'));
+        $this->assertNull(passwordRuleError('abcdefghij1k', 'abcdefghij1k'));
     }
 
     // ── finding the account ─────────────────────────────────────

@@ -279,7 +279,7 @@ The full list, with how to report a problem, is in [SECURITY.md](./SECURITY.md).
 
 - All SQL uses PDO prepared statements with emulation off
 - Secure sessions: `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, strict mode, 8 hour lifetime. Changing a password ends the user's other sessions
-- Content-Security-Policy on every HTML page: scripts run only from this site or with a fresh per-request nonce, and inline `<script>` and inline event handlers are not allowed
+- Content-Security-Policy on every HTML page: scripts run only from this site or with a fresh per-request nonce, inline `<script>` blocks, inline event handlers and unnonced `<style>` blocks are not allowed, and the landing page gets the same kind of policy from `.htaccess`
 - Browser hardening headers (`nosniff`, frame protection, referrer policy, permissions policy, HSTS)
 - Login and registration are rate limited per IP and action (5 failures in 15 minutes triggers a 15 minute lock that doubles on repeat, capped at 24 hours)
 - CSRF protection on write requests; sign-in responses do not reveal whether an account exists
@@ -294,9 +294,8 @@ Found a vulnerability? Please open a private security advisory on GitHub rather 
 **Known gaps**
 - [ ] **Migrations lag behind the code.** No migration creates `cities`, `road_groups`, `audit_log` or `rate_limit_attempts`, and several columns exist only in production. `tests/e2e/schema.sql` is the complete, current picture, so use it for fresh installs. A consolidating migration is still to do.
 - [ ] Profile pictures are stored as base64 in MySQL because Railway's filesystem is ephemeral. Object storage would be better.
-- [ ] `style-src` still allows `'unsafe-inline'` because pages use inline `style` attributes. Removing it is a larger clean-up.
-- [ ] `index.html` (the public landing page) still has a few inline handlers. It sends no policy header, so nothing breaks, but it would need tidying before one is added.
-- [ ] The minimum password length is 8 characters. Raising it to 10 is under consideration.
+- [ ] `style="..."` attributes are still allowed by the policy (`style-src-attr`), because pages set colours and widths that way. Only `<style>` blocks need the nonce. Moving every attribute into a stylesheet would be a larger clean-up.
+- [ ] The minimum password length is 12. Accounts that chose a shorter password before that keep it until they change it, and passwords are not checked against leaked-password lists.
 
 **Roadmap**
 - [ ] Image upload for audits

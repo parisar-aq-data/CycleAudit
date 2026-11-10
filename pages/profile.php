@@ -220,7 +220,7 @@ $initials = strtoupper(substr($CURRENT_USER_NAME, 0, 2));
           </div>
           <div class="field">
             <label>New Password</label>
-            <input type="password" id="f-new-pw" placeholder="At least 8 characters" data-profile-action="check-strength">
+            <input type="password" id="f-new-pw" placeholder="At least 12 characters" data-profile-action="check-strength">
             <div class="pw-strength"><div class="pw-strength-bar" id="pw-bar"></div></div>
             <span class="field-hint" id="pw-hint">Enter a new password</span>
           </div>

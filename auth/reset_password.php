@@ -88,7 +88,7 @@ require __DIR__ . '/partials/shell_top.php';
       <div class="card-links"><a href="forgot_password.php">Send me a new link</a><a href="login.php">Sign in</a></div>
 
       <?php else: ?>
-      <p class="card-text">Choose a new password for <strong><?= htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>. Use at least 8 characters, with a letter and a number.</p>
+      <p class="card-text">Choose a new password for <strong><?= htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>. Use at least 12 characters, with a letter and a number.</p>
 
       <?php if ($error !== ''): ?>
       <div class="alert" id="auth-error" role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
@@ -101,7 +101,7 @@ require __DIR__ . '/partials/shell_top.php';
           <div class="f">
             <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /> <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /> <path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
             <label class="sr-only" for="password">New password</label>
-            <input type="password" id="password" name="password" required minlength="8"
+            <input type="password" id="password" name="password" required minlength="12"
                    placeholder="New password" autocomplete="new-password" autofocus
                    <?= $error !== '' ? 'aria-describedby="auth-error"' : '' ?>>
             <button type="button" class="eye" data-toggle-pass="password" aria-controls="password" aria-pressed="false" aria-label="Show password">
@@ -114,7 +114,7 @@ require __DIR__ . '/partials/shell_top.php';
           <div class="f">
             <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /> <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /> <path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
             <label class="sr-only" for="confirm_password">Confirm new password</label>
-            <input type="password" id="confirm_password" name="confirm_password" required minlength="8"
+            <input type="password" id="confirm_password" name="confirm_password" required minlength="12"
                    placeholder="Confirm new password" autocomplete="new-password">
           </div>
         </div>
