@@ -16,7 +16,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8080").rstrip("/")
-PASSWORD = "Test@12345"
+PASSWORD = "Test@12345678"
 
 ADMIN = "admin@test.local"
 LEADER_PUNE = "leader.pune@test.local"

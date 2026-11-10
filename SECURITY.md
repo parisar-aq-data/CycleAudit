@@ -7,7 +7,7 @@ Please open a **private security advisory** on this repository (Security tab, "R
 ## What protects CycleAudit
 
 **Accounts and sessions**
-- Passwords are stored with `password_hash`, minimum length 8.
+- Passwords are stored with `password_hash`, minimum length 12.
 - New self-registered accounts are held as `pending` until a City Leader or Admin approves them.
 - Sessions are `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, with strict mode and an 8 hour lifetime. Changing a password ends the account's other sessions.
 - Every request re-checks the user's role, active status and approval in the database, not just the session.
@@ -15,7 +15,8 @@ Please open a **private security advisory** on this repository (Security tab, "R
 - Write requests carry a CSRF token.
 
 **Browser protections**
-- `Content-Security-Policy` on every HTML page (`sendCspHeader()` in `config/constants.php`). Scripts run only from this site or with a fresh per-request nonce. Inline `<script>` blocks need that nonce, and inline event handlers (`onclick=` and similar) are not allowed, so new code should attach handlers in JavaScript files.
+- `Content-Security-Policy` on every HTML page (`sendCspHeader()` in `config/constants.php`). Scripts run only from this site or with a fresh per-request nonce. Inline `<script>` blocks need that nonce, and inline event handlers (`onclick=` and similar) are not allowed, so new code should attach handlers in JavaScript files. Inline `<style>` blocks need the nonce too (`style-src-elem`).
+- The public landing page (`index.html`) is a plain file served by Apache, so its policy is set in `.htaccess`. It allows scripts only from this site, with no inline scripts and no inline handlers.
 - Also set: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` (geolocation for our own origin only), `Strict-Transport-Security`.
 - Output that comes from the database (for example road labels) is escaped before it reaches the page.
 
@@ -33,8 +34,8 @@ Please open a **private security advisory** on this repository (Security tab, "R
 
 ## Known limits
 
-- `style-src` still allows `'unsafe-inline'`.
-- `index.html` has no policy header and still has a few inline handlers.
+- `style="..."` attributes are still allowed (`style-src-attr 'unsafe-inline'`), because pages set colours and widths that way. Injected `<style>` blocks are blocked, injected style attributes are not.
+- People who chose a shorter password before the minimum was raised to 12 keep it until they next change it. There is no check against lists of leaked passwords.
 - Email-based password reset depends on the configured mail provider (`MAIL_*` variables). Without it, staff use the Reset password button.
 
 ## Safe changes

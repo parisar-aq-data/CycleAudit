@@ -156,11 +156,18 @@ function sendCspHeader(): void
     }
     // Scripts run only from this site or with this request's nonce ('unsafe-inline' is gone).
     $scriptSrc = "'self'" . ($nonce !== '' ? " 'nonce-" . $nonce . "'" : '');
+    // Style blocks and stylesheets need the same nonce (or come from this site / Google Fonts).
+    $styleElem = "'self' https://fonts.googleapis.com" . ($nonce !== '' ? " 'nonce-" . $nonce . "'" : '');
     header(
         "Content-Security-Policy: " .
         "default-src 'self'; " .
         "script-src " . $scriptSrc . "; " .
+        // Modern browsers use the two lines below: style blocks need the nonce, while
+        // style="..." attributes stay allowed because pages set colours and widths that way.
+        // The plain style-src line is only the fallback for very old browsers.
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
+        "style-src-elem " . $styleElem . "; " .
+        "style-src-attr 'unsafe-inline'; " .
         "font-src 'self' https://fonts.gstatic.com; " .
         "img-src 'self' data:; " .
         "connect-src 'self'; " .

@@ -39,6 +39,15 @@ RewriteRule ^ index.html [L]
     Options -Indexes
 </IfModule>
 
+# The public landing page is a plain file that Apache serves, so PHP cannot add
+# its policy header. Set it here. Scripts may only come from this site
+# ('inline-speculation-rules' allows the small prerender hint in index.html).
+<IfModule mod_headers.c>
+    <Files "index.html">
+        Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'inline-speculation-rules'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    </Files>
+</IfModule>
+
 # Cache static assets
 <IfModule mod_headers.c>
     <FilesMatch "\.(css|js|png|jpg|woff2)">

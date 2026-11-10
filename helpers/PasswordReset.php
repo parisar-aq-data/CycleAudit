@@ -27,13 +27,13 @@ function passwordResetStamp(int $ts): string
 }
 
 /**
- * The same rules as sign-up: 8+ characters with a letter and a number.
+ * The same rules as sign-up: 12+ characters with a letter and a number.
  * Returns an error message, or null when the password is acceptable.
  */
 function passwordRuleError(string $password, string $confirm): ?string
 {
-    if (strlen($password) < 8) {
-        return 'Password must be at least 8 characters.';
+    if (strlen($password) < 12) {
+        return 'Password must be at least 12 characters.';
     }
     if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
         return 'Password must contain at least one letter and one number.';

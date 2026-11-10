@@ -77,6 +77,22 @@ if BASE.startswith("https://"):
         value = r.headers.get(header, "")
         check(f"header {header} is set", bool(value) and needle in value, value or "missing")
 
+    # 4c. Content-Security-Policy: the landing page gets it from .htaccess, PHP pages from sendCspHeader()
+    def directive(csp, name):
+        return next((d.strip() for d in csp.split(";") if d.strip().startswith(name + " ")), "")
+
+    for path in ("/", "/auth/login.php"):
+        r, _ = get(path)
+        csp = r.headers.get("Content-Security-Policy", "")
+        script = directive(csp, "script-src")
+        check(f"{path} sends a Content-Security-Policy", bool(csp), "missing" if not csp else "")
+        check(f"{path} script-src does not allow 'unsafe-inline'", bool(script) and "'unsafe-inline'" not in script,
+              script or "no script-src")
+    r, _ = get("/auth/login.php")
+    elem = directive(r.headers.get("Content-Security-Policy", ""), "style-src-elem")
+    check("sign-in page: <style> blocks need the nonce", "'nonce-" in elem and "'unsafe-inline'" not in elem,
+          elem or "no style-src-elem")
+
 # 5. HTTPS only (skipped for local http:// copies)
 if BASE.startswith("https://"):
     try:

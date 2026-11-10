@@ -158,3 +158,46 @@ def test_script_src_has_no_unsafe_inline():
             if "script-src" in line:
                 assert "unsafe-inline" not in line, f"{rel}: script-src allows 'unsafe-inline' again:\n{line.strip()}"
         assert "'nonce-" in text, f"{rel}: script-src must carry the request's nonce"
+
+
+# --- landing page (index.html) ---
+def test_landing_page_has_no_inline_handlers_or_scripts():
+    """index.html is served by Apache, so its policy comes from .htaccess and allows no inline scripts."""
+    text = (ROOT / "index.html").read_text(encoding="utf-8")
+    hits = [f"line {n}: {line.strip()[:90]}"
+            for n, line in enumerate(text.splitlines(), 1) if INLINE.search(line)]
+    assert not hits, "index.html has inline event handlers again:\n" + "\n".join(hits)
+    inline = [m.group(0) for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>", text)
+              if "speculationrules" not in m.group(0)]
+    assert not inline, f"index.html has an inline <script> again (move it to a file in js/): {inline}"
+
+
+def test_htaccess_sends_a_policy_for_the_landing_page():
+    text = (ROOT / ".htaccess").read_text(encoding="utf-8")
+    assert '<Files "index.html">' in text, ".htaccess must set a Content-Security-Policy for index.html"
+    block = text[text.index('<Files "index.html">'):]
+    block = block[:block.index("</Files>")]
+    script = next(d for d in block.split(";") if "script-src" in d)
+    assert "'self'" in script and "unsafe-inline" not in script, f"landing page script-src is too loose: {script.strip()}"
+
+
+# --- <style> blocks need the nonce too ---
+def test_style_blocks_in_pages_have_a_nonce():
+    """Browsers only run a <style> block that carries the request's nonce (style-src-elem).
+    api/reports/export-pdf.php is not sent to a browser, it is turned into a PDF on the server."""
+    bare = []
+    for p in sorted(ROOT.rglob("*.php")):
+        rel = p.relative_to(ROOT).as_posix()
+        if rel.startswith(("vendor/", "tests/")) or rel == "api/reports/export-pdf.php":
+            continue
+        for m in re.finditer(r"<style(?![^>]*nonce=)[^>]*>", p.read_text(encoding="utf-8")):
+            bare.append(f"{rel}: {m.group(0)}")
+    assert not bare, "<style> blocks without a nonce:\n" + "\n".join(bare)
+
+
+def test_style_src_elem_requires_the_nonce():
+    for rel in ("config/constants.php", "pages/public_audit_report.php"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        lines = [l for l in text.splitlines() if "style-src-elem" in l]
+        assert lines, f"{rel}: style-src-elem is missing"
+        assert all("unsafe-inline" not in l for l in lines), f"{rel}: style-src-elem allows 'unsafe-inline'"

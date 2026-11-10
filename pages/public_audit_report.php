@@ -31,7 +31,10 @@ require_once __DIR__ . '/../services/ScoreService.php';
 $nonceRaw = base64_encode(random_bytes(16));
 header(
     "Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-" . $nonceRaw . "'; " .
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; " .
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
+    "style-src-elem 'self' 'nonce-" . $nonceRaw . "' https://fonts.googleapis.com; " .
+    "style-src-attr 'unsafe-inline'; " .
+    "font-src 'self' https://fonts.gstatic.com; " .
     "img-src 'self' data:; connect-src 'self';"
 );
 header('Cache-Control: no-cache');
@@ -41,10 +44,11 @@ function publicReportNotFound(int $status, string $message): never
 {
     http_response_code($status);
     $m = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $n = htmlspecialchars($GLOBALS['nonceRaw'] ?? '', ENT_QUOTES, 'UTF-8');
     echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
        . '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
        . '<title>Report not available — CycleAudit</title>'
-       . '<style>body{font-family:system-ui,sans-serif;background:#f7f4ee;color:#181f10;display:flex;'
+       . '<style nonce="' . $n . '">body{font-family:system-ui,sans-serif;background:#f7f4ee;color:#181f10;display:flex;'
        . 'min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px;text-align:center}'
        . 'a{color:#3d7a1f;font-weight:600}</style></head><body><div><h1>' . $m . '</h1>'
        . '<p><a href="../index.html#audits">← Back to the audit data</a></p></div></body></html>';

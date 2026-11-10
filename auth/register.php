@@ -107,8 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimited) {
     $errors = array_merge($errors, $locErrors);
     $signupCityId = $homeCity !== null ? signupCityId($cities, $homeCity) : null;
 
-    if (strlen($pass) < 8) {
-        $errors['password'] = 'Password must be at least 8 characters.';
+    if (strlen($pass) < 12) {
+        $errors['password'] = 'Password must be at least 12 characters.';
     } elseif (!preg_match('/[A-Za-z]/', $pass) || !preg_match('/[0-9]/', $pass)) {
         $errors['password'] = 'Password must contain at least one letter and one number.';
     }
@@ -385,7 +385,7 @@ function ic(string $name): string
             </div>
             <div class="str"><div class="str-bar"><i id="sf"></i></div><span id="sl">Enter a password</span></div>
             <ul class="rules" id="pw-rules">
-              <li data-rule="len"><?= ic('check') ?>8 or more characters</li>
+              <li data-rule="len"><?= ic('check') ?>12 or more characters</li>
               <li data-rule="alpha"><?= ic('check') ?>One letter</li>
               <li data-rule="num"><?= ic('check') ?>One number</li>
             </ul>

@@ -19,8 +19,8 @@
   }
   function checkPassword() {
     var v = pass.value, s = 0;
-    if (v.length >= 8) s++;
     if (v.length >= 12) s++;
+    if (v.length >= 16) s++;
     if (/[A-Z]/.test(v)) s++;
     if (/[0-9]/.test(v)) s++;
     if (/[^A-Za-z0-9]/.test(v)) s++;
@@ -28,7 +28,7 @@
     fill.style.width = WIDTHS[s];
     fill.style.background = COLOURS[s];
     $('sl').textContent = v.length ? (LABELS[s] || 'Weak') : 'Enter a password';
-    setRule('len', v.length >= 8);
+    setRule('len', v.length >= 12);
     setRule('alpha', /[A-Za-z]/.test(v));
     setRule('num', /[0-9]/.test(v));
     checkMatch();
