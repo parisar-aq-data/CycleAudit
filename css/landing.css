@@ -389,3 +389,10 @@ a.collab-card:hover .collab-visit span,a.collab-card:focus-visible .collab-visit
   .cg{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
   .rs-key{flex-wrap:wrap;row-gap:4px}
 }
+
+/* Phone menu. The top bar has backdrop-filter, which makes the bar (not the screen) the
+   containing block for position:fixed children, so the old fixed menu measured 64px from a
+   64px-tall bar and ended up with no height. Hang the menu under the bar instead. */
+@media(max-width:640px){
+  .nl{position:absolute;inset:100% 0 auto 0;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);background:#f7f4ee;border-bottom:1px solid var(--bd);box-shadow:0 18px 32px rgba(24,31,16,.14)}
+}
