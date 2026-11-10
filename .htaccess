@@ -43,8 +43,9 @@ RewriteRule ^ index.html [L]
 # its policy header. Set it here. Scripts may only come from this site
 # ('inline-speculation-rules' allows the small prerender hint in index.html).
 <IfModule mod_headers.c>
+    # style-src is only the fallback for very old browsers; style-src-elem blocks injected <style> blocks (index.html has none)
     <Files "index.html">
-        Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'inline-speculation-rules'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'inline-speculation-rules'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
     </Files>
 </IfModule>
 

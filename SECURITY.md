@@ -16,7 +16,7 @@ Please open a **private security advisory** on this repository (Security tab, "R
 
 **Browser protections**
 - `Content-Security-Policy` on every HTML page (`sendCspHeader()` in `config/constants.php`). Scripts run only from this site or with a fresh per-request nonce. Inline `<script>` blocks need that nonce, and inline event handlers (`onclick=` and similar) are not allowed, so new code should attach handlers in JavaScript files. Inline `<style>` blocks need the nonce too (`style-src-elem`).
-- The public landing page (`index.html`) is a plain file served by Apache, so its policy is set in `.htaccess`. It allows scripts only from this site, with no inline scripts and no inline handlers.
+- The public landing page (`index.html`) is a plain file served by Apache, so its policy is set in `.htaccess`. It allows scripts only from this site, with no inline scripts and no inline handlers. It has no `<style>` blocks, so `style-src-elem` allows only this site and Google Fonts; injected style blocks are blocked there too, and `style="..."` attributes stay allowed.
 - Also set: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` (geolocation for our own origin only), `Strict-Transport-Security`.
 - Output that comes from the database (for example road labels) is escaped before it reaches the page.
 

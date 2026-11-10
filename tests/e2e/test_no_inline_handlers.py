@@ -181,6 +181,18 @@ def test_htaccess_sends_a_policy_for_the_landing_page():
     assert "'self'" in script and "unsafe-inline" not in script, f"landing page script-src is too loose: {script.strip()}"
 
 
+def test_landing_page_blocks_injected_style_blocks():
+    """index.html has no <style> block, so the landing policy must not let one run (style-src-elem)."""
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    assert not re.search(r"<style\b", html, re.I), "index.html has a <style> block; move it to css/landing.css"
+    text = (ROOT / ".htaccess").read_text(encoding="utf-8")
+    block = text[text.index('<Files "index.html">'):]
+    block = block[:block.index("</Files>")]
+    elem = next((d for d in block.split(";") if "style-src-elem" in d), "")
+    assert elem, ".htaccess must set style-src-elem for the landing page"
+    assert "unsafe-inline" not in elem, f"landing page style-src-elem allows 'unsafe-inline': {elem.strip()}"
+
+
 # --- <style> blocks need the nonce too ---
 def test_style_blocks_in_pages_have_a_nonce():
     """Browsers only run a <style> block that carries the request's nonce (style-src-elem).
