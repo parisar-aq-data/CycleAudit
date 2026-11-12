@@ -93,6 +93,8 @@ Check the Backblaze B2 dashboard directly:
 - Encryption column should read **AES256 (SSE-B2)**
 - Bucket should remain **Private**
 
+A file in the bucket proves the upload happened, not that the dump can be loaded. Nothing checks restores automatically, so every few months restore the newest file into a scratch database (see below) and check that the tables and row counts look right.
+
 ## Restoring from a backup
 
 1. Download the desired `cycleaudit_<timestamp>.sql.gz` from the B2 bucket
@@ -102,6 +104,8 @@ Check the Backblaze B2 dashboard directly:
    ```bash
    mysql -h <host> -P <port> -u <user> -p <database> < cycleaudit_<timestamp>.sql
    ```
+
+**Caution:** the dump drops and re-creates each table as it loads (`mysqldump` adds `DROP TABLE IF EXISTS` by default, and `scripts/backup.sh` does not turn that off). Loading it into the live database **replaces the current data** with the data in the file. Restore into a new, empty scratch database first, check the row counts, and only then decide whether to restore production. Take a fresh backup of production before you do.
 
 ## Troubleshooting
 
@@ -140,3 +144,5 @@ debug line once confirmed and fixed.
 relevant (e.g. toggling Serverless mode, waiting out DNS propagation), that's
 a signal to check the mundane stuff — variable values, whitespace, typos —
 before continuing down a deeper infrastructure rabbit hole.
+
+See also [docs/operations.md](docs/operations.md) for how the backup job fits with deployments and the runbooks.
