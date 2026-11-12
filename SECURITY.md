@@ -11,7 +11,7 @@ Please open a **private security advisory** on this repository (Security tab, "R
 - New self-registered accounts are held as `pending` until a City Leader or Admin approves them.
 - Sessions are `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, with strict mode and an 8 hour lifetime. Changing a password ends the account's other sessions.
 - Every request re-checks the user's role, active status and approval in the database, not just the session.
-- Sign-in and sign-up are rate limited per IP: 5 failures in 15 minutes locks for 15 minutes, doubling on repeat up to 24 hours. Responses do not reveal whether an account exists.
+- Sign-in and sign-up are rate limited per IP: 5 failures in 15 minutes locks that action for that IP for 15 minutes. The code is written to double the lock on repeat (up to 24 hours), but reading it suggests the doubling never takes effect, so expect 15 minutes each time (not tested on a live copy; see [docs/auth-and-permissions.md](docs/auth-and-permissions.md), section 5). Responses do not reveal whether an account exists.
 - Write requests carry a CSRF token.
 
 **Browser protections**
@@ -28,7 +28,7 @@ Please open a **private security advisory** on this repository (Security tab, "R
 - Daily encrypted-at-rest database backups go to a private bucket in Parisar's own Backblaze account. See [BACKUPS.md](./BACKUPS.md).
 
 **Automated checks**
-- A weekly dependency scan and Dependabot watch the PHP libraries.
+- A dependency audit runs on every pull request (it fails on known vulnerabilities), and a report-only scan of the libraries and code patterns (Semgrep) runs on pull requests and weekly. Dependabot opens pull requests for outdated libraries.
 - End-to-end tests run on every pull request and cover approvals, sessions, access control, lockout and the sign-in page policy. See `tests/e2e/README.md`.
 - A smoke test checks the live site every 6 hours and after each deploy.
 
@@ -36,7 +36,7 @@ Please open a **private security advisory** on this repository (Security tab, "R
 
 - `style="..."` attributes are still allowed (`style-src-attr 'unsafe-inline'`), because pages set colours and widths that way. Injected `<style>` blocks are blocked, injected style attributes are not.
 - People who chose a shorter password before the minimum was raised to 12 keep it until they next change it. There is no check against lists of leaked passwords.
-- Email-based password reset depends on the configured mail provider (`MAIL_*` variables). Without it, staff use the Reset password button.
+- An emailed password reset link exists in the code (`helpers/PasswordReset.php`, `auth/reset_password.php`, `helpers/Mailer.php`) but nothing in the live application sends it, whatever the `MAIL_*` variables are set to. People who forget a password use the "forgot password" request, which a team leader, City Leader or Admin approves with a code, or staff use the Reset password button. See [docs/auth-and-permissions.md](docs/auth-and-permissions.md), section 7.
 
 ## Safe changes
 
@@ -44,3 +44,5 @@ Please open a **private security advisory** on this repository (Security tab, "R
 2. Run database changes by hand in Railway's query box, one statement per query, **before** deploying code that needs them, after taking a backup.
 3. After a deploy, open the live site with the browser console visible and watch for red "Content Security Policy" messages.
 4. To undo a bad merge: `git revert -m 1 <merge commit>` and push.
+
+Deeper technical detail: [authentication and permissions](docs/auth-and-permissions.md), [frontend and CSP](docs/frontend.md), [operations](docs/operations.md).

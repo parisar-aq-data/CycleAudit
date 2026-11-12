@@ -26,6 +26,8 @@
 
 ## Table of contents
 
+Full technical documentation (database, permissions, scoring, workflows, API, frontend, operations): **[docs/README.md](docs/README.md)**.
+
 1. [What it does](#what-it-does)
 2. [Features](#features)
 3. [How scoring works](#how-scoring-works)
@@ -73,13 +75,13 @@ Parisar audits the quality of cycling infrastructure across Pune. CycleAudit rep
 
 **Accounts and administration**
 - Email and password sign-up. New accounts are **held for approval** by a City Leader or Admin before they can sign in
-- Password help: an emailed one-time reset link, a "forgot password" request that goes to the surveyor's team leader, and a **Reset password** button for Admins and City Leaders
+- Password help: a "forgot password" request (the person picks a new password and gets a 6-digit code to give to their team leader, City Leader or an Admin, who approves it) and a **Reset password** button for Admins and City Leaders. An emailed one-time reset link exists in the code but is **not sent** by the live application yet (see [docs/auth-and-permissions.md](docs/auth-and-permissions.md), section 7.4)
 - Role-based access control: Admin, City Leader, Surveyor
 - Admin dashboard, road manager, surveyor manager (approve, activate or deactivate accounts), activity log
 - Excel exports of users and roads for admins
 
 **Operations**
-- IP and action based **rate limiting** with escalating lockouts
+- IP and action based **rate limiting** with temporary lockouts
 - Activity logging for key user actions
 - `/health.php` endpoint for Railway health checks and uptime monitoring
 - Automated daily database backups to Backblaze B2, owned by Parisar
@@ -139,7 +141,7 @@ Parisar/
 │   ├── dashboard.php        #   surveyor dashboard
 │   ├── form.php, segment.php#   audit workflow
 │   ├── view.php, report.php, road_result.php, profile.php
-│   └── admin*.php           #   admin dashboard, surveyors, activity log
+│   └── admin_*.php, city_*.php, platform_dashboard.php  #  Admin and City Leader screens
 ├── api/                     # JSON endpoints, grouped by domain
 │   ├── roads/, segments/, audit-sessions/
 │   ├── reports/             #   PDF and Excel export
@@ -149,13 +151,13 @@ Parisar/
 ├── services/                # ScoreService, ScoreHelpers, IdGenerator
 ├── repositories/            # Road, Segment, AuditSession data access
 ├── helpers/                 # Validator, StreakCalculator, ActivityLogger
-├── js/                      # front-end modules (form-state, toast, loading-state, ...)
+├── js/                      # browser scripts, roughly one per screen (form.js, segment.js, dashboard.js, ...)
 ├── css/                     # stylesheets
 ├── migrations/              # SQL migrations 000 to 032
 ├── tests/                   # PHPUnit suites
 │   ├── e2e/                 #   end-to-end tests (pytest, Playwright) and schema.sql
 │   └── smoke/               #   read-only checks of the live site
-├── scripts/backup.sh        # database backup job
+├── scripts/                 # backup.sh (daily database backup), make_admin_reset_sql.php (emergency Admin reset)
 ├── Dockerfile, docker-entrypoint.sh, railway.toml
 ├── health.php               # health check endpoint
 └── .github/workflows/       # CI, security scan, smoke test
@@ -172,7 +174,7 @@ Core tables created by `migrations/000_initial_schema.sql`:
 | `users` | Accounts, role, profile picture |
 | `roads` | A road to audit: name (unique), endpoints, GPS, length, segmentation method, `finalized_at` |
 | `segments` | Slices of a road with distances and a pending or completed status |
-| `audit_sessions` | One surveyor's audit run over a road (active, completed, abandoned) |
+| `audit_sessions` | One surveyor's audit run over a road (active, completed, archived) |
 | `segment_audits` | The audit form for one segment: surface, shade, lighting, buffer, width, footpath, comments |
 | `obstructions` | Fixed, movable or parked obstructions attached to an audit |
 | `intersections` | Ramps, markings, signage and traffic calming at each intersection |
@@ -223,8 +225,8 @@ Settings are read from environment variables first, then a local `.env` (via php
 | `MYSQLDATABASE` / `DB_NAME` | Database name | `parisar_db` |
 | `MYSQLUSER` / `DB_USER` | Database user | `root` |
 | `MYSQLPASSWORD` / `DB_PASS` | Database password | empty |
-| `BASE_URL` | Public URL of the app (also used in the password reset link) | `http://localhost/Parisar` |
-| `MAIL_PROVIDER` | Email service for password reset: `brevo` or `resend` | empty (reset emails are not sent) |
+| `BASE_URL` | Public URL of the app. Today only the (unused) emailed reset link and the end-to-end tests read it | `http://localhost/Parisar` |
+| `MAIL_PROVIDER` | Email service for the emailed reset link: `brevo` or `resend`. The live code does not send that email yet, so these `MAIL_*` settings change nothing today | empty |
 | `MAIL_API_KEY` | The email service's API key | empty |
 | `MAIL_FROM` | Sender address, verified with the email service | empty |
 | `MAIL_FROM_NAME` | Sender name | `CycleAudit` |
@@ -243,9 +245,9 @@ There are more than 580 PHPUnit test methods across 47 files. They cover scoring
 
 | Workflow | When it runs | What it checks |
 | --- | --- | --- |
-| **CI / CD** (`deploy.yml`) | every push and pull request to `main` | PHP lint, PHPUnit, dependency audit |
-| **End-to-end tests** (`e2e.yml`) | every pull request | sign-up and approval, sessions and passwords, access control, sign-in page security headers |
-| **Security scan** (`security-scan.yml`) | weekly (Monday 03:23 UTC) | known vulnerabilities in PHP libraries |
+| **CI / CD** (`deploy.yml`) | every push and pull request to `main` | PHP lint, PHPUnit, dependency audit. It only tests; Railway does the deploying |
+| **End-to-end tests** (`e2e.yml`) | every push and pull request to `main`, and on demand | sign-up and approval, sessions and passwords, access control, sign-in page security headers |
+| **Security scan** (`security-scan.yml`) | pull requests and pushes to `main`, weekly (Monday 03:23 UTC) and on demand | known vulnerabilities in PHP libraries and risky code patterns (Semgrep). Report only; it never blocks a merge |
 | **Live smoke test** (`smoke.yml`) | every 6 hours and after each deploy | the live site responds |
 | **Docker permissions** | when the Docker setup changes | the web server cannot modify the code |
 
@@ -281,7 +283,7 @@ The full list, with how to report a problem, is in [SECURITY.md](./SECURITY.md).
 - Secure sessions: `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, strict mode, 8 hour lifetime. Changing a password ends the user's other sessions
 - Content-Security-Policy on every HTML page: scripts run only from this site or with a fresh per-request nonce, inline `<script>` blocks, inline event handlers and unnonced `<style>` blocks are not allowed, and the landing page gets the same kind of policy from `.htaccess`
 - Browser hardening headers (`nosniff`, frame protection, referrer policy, permissions policy, HSTS)
-- Login and registration are rate limited per IP and action (5 failures in 15 minutes triggers a 15 minute lock that doubles on repeat, capped at 24 hours)
+- Login and registration are rate limited per IP and action (5 failures in 15 minutes locks that action for that IP for 15 minutes; the code is written to double the lock on repeat, up to 24 hours, but reading it suggests the doubling never takes effect, see [docs/auth-and-permissions.md](docs/auth-and-permissions.md), section 5)
 - CSRF protection on write requests; sign-in responses do not reveal whether an account exists
 - New accounts need approval, and guards re-check the user's role, active status and approval from the database on every request
 - Errors are logged server-side and never shown to the browser
